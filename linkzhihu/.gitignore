@@ -1,0 +1,7 @@
+browser_data/
+output/
+*.log
+progress.json
+__pycache__/
+*.pyc
+.DS_Store
