@@ -1,0 +1,811 @@
+{
+    "nodes": [
+        {
+            "h": 50,
+            "id": "ae0ea128-0988-43a9-ac42-4587ce21612a",
+            "left": -273,
+            "top": 178,
+            "type": "start",
+            "w": 150,
+            "parameters": {
+                "startId": "ae0ea128-0988-43a9-ac42-4587ce21612a"
+            }
+        },
+        {
+            "h": 50,
+            "id": "37412a0c-c5cd-4af1-bd96-bda89064e3b6",
+            "left": 1343,
+            "top": 178,
+            "type": "finished",
+            "parameters": {
+                "finishedName": "已完成",
+                "finishedId": "37412a0c-c5cd-4af1-bd96-bda89064e3b6"
+            },
+            "w": 150,
+            "text": "已完成"
+        },
+        {
+            "left": -18,
+            "top": 170,
+            "w": 190,
+            "h": 56,
+            "type": "task",
+            "parameters": {
+                "taskName": "提交需求",
+                "withdrawFlag": "0",
+                "batchFlag": "0",
+                "transferFlag": "0",
+                "voteFlag": "0",
+                "layoutId": "",
+                "groupId": "",
+                "approvalProxy": "",
+                "rejectProxy": "",
+                "tempSaveProxy": "",
+                "chooseUserType": "1",
+                "chooseUserPageFlag": "0",
+                "chooseUserPageType": "1",
+                "chooseUserDialogFlag": "0",
+                "chooseUserDialogType": "1",
+                "flowSql": "",
+                "handleSql": "",
+                "singleLayoutAry": [
+                    {
+                        "key": "object_PRDYZ",
+                        "value": "object_PRDYZ_cmps_b46aa8dc2a73d6eeb596609ba797d328"
+                    },
+                    {
+                        "key": "object_PRDYZ_cmps_b46aa8dc2a73d6eeb596609ba797d328_page_1d3136e34431e7dc33b8ce8481e402ef",
+                        "value": "object_PRDYZ_cmps_b46aa8dc2a73d6eeb596609ba797d328_page_1d3136e34431e7dc33b8ce8481e402ef_rule_09c2e871-1916-cfa6-40c4-ea6a53c8f185",
+                        "component_id": "91e3ea1d-0e9f-5f4f-111e-19ac5ede7906",
+                        "handleType": "needSave"
+                    },
+                    {
+                        "key": "object_PRDYZ_cmps_b46aa8dc2a73d6eeb596609ba797d328_page_429b4639fce69a38828961c42822302c",
+                        "value": "object_PRDYZ_cmps_b46aa8dc2a73d6eeb596609ba797d328_page_429b4639fce69a38828961c42822302c_rule_6967da7c-2374-fb54-0ead-cfd47cfca8ff",
+                        "component_id": "b2bfc83c-a0a0-b17e-dc23-2101483199fc",
+                        "handleType": "needSave"
+                    },
+                    {
+                        "key": "object_PRDYZ_cmps_b46aa8dc2a73d6eeb596609ba797d328_page_1d3136e34431e7dc33b8ce8481e402ef",
+                        "value": "object_PRDYZ_cmps_b46aa8dc2a73d6eeb596609ba797d328_page_1d3136e34431e7dc33b8ce8481e402ef_rule_10da5511-d2d2-5aed-07ac-2618654ee325",
+                        "component_id": "d819c264-0399-93f8-c92e-c75b6d4d319c",
+                        "handleType": "needSave"
+                    },
+                    {
+                        "key": "object_PRDYZ_cmps_b46aa8dc2a73d6eeb596609ba797d328_page_2d870c2a88ee1f0b68d1e2a13b4d61f5",
+                        "value": "object_PRDYZ_cmps_b46aa8dc2a73d6eeb596609ba797d328_page_2d870c2a88ee1f0b68d1e2a13b4d61f5_rule_1c70c9ba-fc70-21ee-a7ce-e2d48d152bbf",
+                        "component_id": "137beb52-1817-ba52-a37f-7812ac903595",
+                        "handleType": "needSave"
+                    },
+                    {
+                        "key": "object_PRDYZ_cmps_b46aa8dc2a73d6eeb596609ba797d328_page_79cef63848730f7bf8067f10b46eb411",
+                        "value": "object_PRDYZ_cmps_b46aa8dc2a73d6eeb596609ba797d328_page_79cef63848730f7bf8067f10b46eb411_rule_32150b93-496d-7659-3703-1108c3cbdd15",
+                        "component_id": "877cb78a-c2b8-fbee-1b59-f9f6e4d3dc0a",
+                        "handleType": "needSave"
+                    }
+                ],
+                "multipleLayoutList": [],
+                "multipleLayoutMpSql": "",
+                "componentAry": [],
+                "suggestionData": {
+                    "inputTitle": "",
+                    "inputEnabled": "0",
+                    "inputRequiredFlag": "0",
+                    "selectTitle": "",
+                    "selectEnabled": "",
+                    "selectRequiredFlag": "",
+                    "selectOptions": []
+                },
+                "voteSuggestionData": {
+                    "inputTitle": "",
+                    "placeholderSuggest": "",
+                    "inputEnabled": "",
+                    "inputRequiredFlag": "",
+                    "selectTitle": "",
+                    "selectEnabled": "",
+                    "selectRequiredFlag": "",
+                    "selectOptions": []
+                },
+                "taskSort": 1,
+                "taskId": "0cff1d3a-ad7e-4eff-8138-c8c79e5be303",
+                "urgingFlag": "",
+                "rejectSuggestionData": {
+                    "defaultSuggestion": ""
+                }
+            },
+            "text": "提交需求",
+            "remark": "",
+            "id": "0cff1d3a-ad7e-4eff-8138-c8c79e5be303"
+        },
+        {
+            "left": 244,
+            "top": 170,
+            "w": 190,
+            "h": 56,
+            "type": "task",
+            "parameters": {
+                "taskName": "复核需求",
+                "withdrawFlag": "0",
+                "batchFlag": "0",
+                "transferFlag": "0",
+                "voteFlag": "1",
+                "layoutId": "",
+                "groupId": "",
+                "approvalProxy": "",
+                "rejectProxy": "",
+                "tempSaveProxy": "",
+                "chooseUserType": "1",
+                "chooseUserPageFlag": "0",
+                "chooseUserPageType": "1",
+                "chooseUserDialogFlag": "0",
+                "chooseUserDialogType": "1",
+                "flowSql": "",
+                "handleSql": "\t-- 修改后的完整SQL\nselect b.FIRST_INVEST_MANAGER as USER_CODE_LIST\nfrom ODS_PRDYZ_INT_ASSIGN t\nleft join dw_prd_base_info b on t.PRD_O_CODE = b.PRD_O_CODE \nwhere t.INSTANCE_ID = #{INSTANCE_ID}\nand t.JY_INSERT_USER not in (\n    select a.R_CODE1 \n    from sys_rbac_role_relate a \n    where a.ROLE_CODE = 'HXLC00001'\n    and R_TYPE = 'USER'\n)\nand B.FIRST_INVEST_MANAGER is not NULL\n\nunion all \n\nselect user.user_o_code as USER_CODE_LIST\nfrom sys_rbac_user user\nwhere exists (\n    select 1 \n    from ODS_PRDYZ_INT_ASSIGN t\n    where t.INSTANCE_ID = #{INSTANCE_ID}\n    and t.JY_INSERT_USER not in (\n        select a.R_CODE1 \n        from sys_rbac_role_relate a \n        where a.ROLE_CODE = 'HXLC00002'\n        and R_TYPE = 'USER'\n    )\n    and T.SALES_MANAGER is not null\n    and (\n        -- 判断SALES_MANAGER是否为JSON数组格式并包含user_o_code\n        json_contains(t.SALES_MANAGER, json_quote(user.user_o_code)) = 1\n        or\n        -- 同时检查CC_USER\n        (t.CC_USER is not null and json_contains(t.CC_USER, json_quote(user.user_o_code)) = 1)\n    )\n)\n",
+                "singleLayoutAry": [
+                    {
+                        "key": "object_PRDYZ",
+                        "value": "object_PRDYZ_cmps_87ea2bf280919f374180df6d1e0e5f98"
+                    },
+                    {
+                        "key": "object_PRDYZ_cmps_87ea2bf280919f374180df6d1e0e5f98_page_1d3136e34431e7dc33b8ce8481e402ef",
+                        "value": "object_PRDYZ_cmps_87ea2bf280919f374180df6d1e0e5f98_page_1d3136e34431e7dc33b8ce8481e402ef_rule_56740f3c-124b-3582-aad5-45f4dd379401",
+                        "component_id": "91e3ea1d-0e9f-5f4f-111e-19ac5ede7906",
+                        "handleType": "needSave"
+                    },
+                    {
+                        "key": "object_PRDYZ_cmps_87ea2bf280919f374180df6d1e0e5f98_page_429b4639fce69a38828961c42822302c",
+                        "value": "object_PRDYZ_cmps_87ea2bf280919f374180df6d1e0e5f98_page_429b4639fce69a38828961c42822302c_rule_960010f8-b7aa-cb3e-6023-e9e238a7c806",
+                        "component_id": "b2bfc83c-a0a0-b17e-dc23-2101483199fc",
+                        "handleType": "onlyView"
+                    },
+                    {
+                        "key": "object_PRDYZ_cmps_87ea2bf280919f374180df6d1e0e5f98_page_1d3136e34431e7dc33b8ce8481e402ef",
+                        "value": "object_PRDYZ_cmps_87ea2bf280919f374180df6d1e0e5f98_page_1d3136e34431e7dc33b8ce8481e402ef_rule_f2cbe997-ee19-1427-ff4e-f5c58941fb90",
+                        "component_id": "d819c264-0399-93f8-c92e-c75b6d4d319c",
+                        "handleType": "onlyView"
+                    },
+                    {
+                        "key": "object_PRDYZ_cmps_87ea2bf280919f374180df6d1e0e5f98_page_2d870c2a88ee1f0b68d1e2a13b4d61f5",
+                        "value": "object_PRDYZ_cmps_87ea2bf280919f374180df6d1e0e5f98_page_2d870c2a88ee1f0b68d1e2a13b4d61f5_rule_1c70c9ba-fc70-21ee-a7ce-e2d48d152bbf",
+                        "component_id": "137beb52-1817-ba52-a37f-7812ac903595",
+                        "handleType": "onlyView"
+                    }
+                ],
+                "multipleLayoutList": [],
+                "multipleLayoutMpSql": "",
+                "componentAry": [],
+                "suggestionData": {
+                    "inputTitle": "",
+                    "placeholderSuggest": "同意",
+                    "inputEnabled": "1",
+                    "inputRequiredFlag": "0",
+                    "selectTitle": "",
+                    "selectEnabled": "",
+                    "selectRequiredFlag": "",
+                    "selectOptions": []
+                },
+                "voteSuggestionData": {
+                    "inputTitle": "",
+                    "placeholderSuggest": "",
+                    "inputEnabled": "",
+                    "inputRequiredFlag": "",
+                    "selectTitle": "",
+                    "selectEnabled": "",
+                    "selectRequiredFlag": "",
+                    "selectOptions": []
+                },
+                "taskSort": 1,
+                "taskId": "7ee07911-267d-4dbc-8e9a-5b7a05e9b33c",
+                "urgingFlag": "",
+                "rejectSuggestionData": {
+                    "defaultSuggestion": ""
+                },
+                "mobileSingleLayoutAry": [
+                    {
+                        "key": "object_PRDYZ",
+                        "value": "object_PRDYZ_cmps_97b3281df450045e5d3fe2122cc26e39"
+                    },
+                    {
+                        "key": "object_PRDYZ_cmps_97b3281df450045e5d3fe2122cc26e39_page_1d3136e34431e7dc33b8ce8481e402ef",
+                        "value": "object_PRDYZ_cmps_97b3281df450045e5d3fe2122cc26e39_page_1d3136e34431e7dc33b8ce8481e402ef_rule_e1bce31a-d2d2-0b5e-f35e-d2b0dcc7ed2b",
+                        "component_id": "936c6b08-e893-8048-652c-a244a2e56eba",
+                        "handleType": "onlyView"
+                    },
+                    {
+                        "key": "object_PRDYZ_cmps_97b3281df450045e5d3fe2122cc26e39_page_429b4639fce69a38828961c42822302c",
+                        "value": "object_PRDYZ_cmps_97b3281df450045e5d3fe2122cc26e39_page_429b4639fce69a38828961c42822302c_rule_c85819a5-8dff-c070-2328-314e61738e21",
+                        "component_id": "9186f9b7-52a0-4e94-3aaa-1fb603e482b4",
+                        "handleType": "onlyView"
+                    },
+                    {
+                        "key": "object_PRDYZ_cmps_97b3281df450045e5d3fe2122cc26e39_page_2d870c2a88ee1f0b68d1e2a13b4d61f5",
+                        "value": "object_PRDYZ_cmps_97b3281df450045e5d3fe2122cc26e39_page_2d870c2a88ee1f0b68d1e2a13b4d61f5_rule_1c70c9ba-fc70-21ee-a7ce-e2d48d152bbf",
+                        "component_id": "2e784956-49d1-025b-efe7-631ca2f8521d",
+                        "handleType": "onlyView"
+                    }
+                ]
+            },
+            "text": "复核需求",
+            "remark": "",
+            "id": "7ee07911-267d-4dbc-8e9a-5b7a05e9b33c"
+        },
+        {
+            "left": 500,
+            "top": 170,
+            "w": 190,
+            "h": 56,
+            "type": "task",
+            "parameters": {
+                "taskName": "部门领导审批",
+                "withdrawFlag": "0",
+                "batchFlag": "0",
+                "transferFlag": "0",
+                "voteFlag": "0",
+                "layoutId": "",
+                "groupId": "",
+                "approvalProxy": "",
+                "rejectProxy": "",
+                "tempSaveProxy": "",
+                "chooseUserType": "1",
+                "chooseUserPageFlag": "0",
+                "chooseUserPageType": "1",
+                "chooseUserDialogFlag": "0",
+                "chooseUserDialogType": "1",
+                "flowSql": "",
+                "handleSql": "--  投资经理领导审批\nSELECT DISTINCT\n  c.HEAD AS USER_CODE_LIST\nFROM\n  sys_rbac_depart c\nLEFT JOIN (\n  SELECT\n    REPLACE (\n      REPLACE (b.ORG, '[\"', ''),\n      '\"]',\n      ''\n    ) DEPT_O_CODE\n  FROM\n    dw_prd_base_info a\n  LEFT JOIN sys_rbac_user b ON a.FIRST_INVEST_MANAGER = b.USER_O_CODE\n  WHERE\n    b.ENABLED = '1'\n  AND a.PRD_O_CODE IN (\n    SELECT\n      e.PRD_O_CODE\n    FROM\n      ODS_PRDYZ_INT_ASSIGN e\n    WHERE\n      e.INSTANCE_ID = #{INSTANCE_ID}\n  )\n) d ON c.DEPT_O_CODE = d.DEPT_O_CODE\nWHERE\n  d.DEPT_O_CODE IS NOT NULL  AND c.HEAD is not null \n",
+                "singleLayoutAry": [
+                    {
+                        "key": "object_PRDYZ",
+                        "value": "object_PRDYZ_cmps_87ea2bf280919f374180df6d1e0e5f98"
+                    },
+                    {
+                        "key": "object_PRDYZ_cmps_87ea2bf280919f374180df6d1e0e5f98_page_1d3136e34431e7dc33b8ce8481e402ef",
+                        "value": "object_PRDYZ_cmps_87ea2bf280919f374180df6d1e0e5f98_page_1d3136e34431e7dc33b8ce8481e402ef_rule_8d0b5665-06d4-bfa8-803d-3b6099ad71ac",
+                        "component_id": "91e3ea1d-0e9f-5f4f-111e-19ac5ede7906",
+                        "handleType": "onlyView"
+                    },
+                    {
+                        "key": "object_PRDYZ_cmps_87ea2bf280919f374180df6d1e0e5f98_page_429b4639fce69a38828961c42822302c",
+                        "value": "object_PRDYZ_cmps_87ea2bf280919f374180df6d1e0e5f98_page_429b4639fce69a38828961c42822302c_rule_960010f8-b7aa-cb3e-6023-e9e238a7c806",
+                        "component_id": "b2bfc83c-a0a0-b17e-dc23-2101483199fc",
+                        "handleType": "onlyView"
+                    },
+                    {
+                        "key": "object_PRDYZ_cmps_87ea2bf280919f374180df6d1e0e5f98_page_1d3136e34431e7dc33b8ce8481e402ef",
+                        "value": "object_PRDYZ_cmps_87ea2bf280919f374180df6d1e0e5f98_page_1d3136e34431e7dc33b8ce8481e402ef_rule_f2cbe997-ee19-1427-ff4e-f5c58941fb90",
+                        "component_id": "d819c264-0399-93f8-c92e-c75b6d4d319c",
+                        "handleType": "onlyView"
+                    },
+                    {
+                        "key": "object_PRDYZ_cmps_87ea2bf280919f374180df6d1e0e5f98_page_2d870c2a88ee1f0b68d1e2a13b4d61f5",
+                        "value": "object_PRDYZ_cmps_87ea2bf280919f374180df6d1e0e5f98_page_2d870c2a88ee1f0b68d1e2a13b4d61f5_rule_1c70c9ba-fc70-21ee-a7ce-e2d48d152bbf",
+                        "component_id": "137beb52-1817-ba52-a37f-7812ac903595",
+                        "handleType": "onlyView"
+                    }
+                ],
+                "multipleLayoutList": [],
+                "multipleLayoutMpSql": "",
+                "componentAry": [],
+                "suggestionData": {
+                    "inputTitle": "",
+                    "placeholderSuggest": "同意",
+                    "inputEnabled": "1",
+                    "inputRequiredFlag": "0",
+                    "selectTitle": "",
+                    "selectEnabled": "",
+                    "selectRequiredFlag": "",
+                    "selectOptions": []
+                },
+                "voteSuggestionData": {
+                    "inputTitle": "",
+                    "placeholderSuggest": "",
+                    "inputEnabled": "",
+                    "inputRequiredFlag": "",
+                    "selectTitle": "",
+                    "selectEnabled": "",
+                    "selectRequiredFlag": "",
+                    "selectOptions": []
+                },
+                "taskSort": 1,
+                "taskId": "1ca51b31-bfab-4e87-bb0e-177bd9e380e2",
+                "urgingFlag": "",
+                "rejectSuggestionData": {
+                    "defaultSuggestion": ""
+                },
+                "mobileSingleLayoutAry": [
+                    {
+                        "key": "object_PRDYZ",
+                        "value": "object_PRDYZ_cmps_97b3281df450045e5d3fe2122cc26e39"
+                    },
+                    {
+                        "key": "object_PRDYZ_cmps_97b3281df450045e5d3fe2122cc26e39_page_1d3136e34431e7dc33b8ce8481e402ef",
+                        "value": "object_PRDYZ_cmps_97b3281df450045e5d3fe2122cc26e39_page_1d3136e34431e7dc33b8ce8481e402ef_rule_e1bce31a-d2d2-0b5e-f35e-d2b0dcc7ed2b",
+                        "component_id": "936c6b08-e893-8048-652c-a244a2e56eba",
+                        "handleType": "onlyView"
+                    },
+                    {
+                        "key": "object_PRDYZ_cmps_97b3281df450045e5d3fe2122cc26e39_page_429b4639fce69a38828961c42822302c",
+                        "value": "object_PRDYZ_cmps_97b3281df450045e5d3fe2122cc26e39_page_429b4639fce69a38828961c42822302c_rule_c85819a5-8dff-c070-2328-314e61738e21",
+                        "component_id": "9186f9b7-52a0-4e94-3aaa-1fb603e482b4",
+                        "handleType": "onlyView"
+                    },
+                    {
+                        "key": "object_PRDYZ_cmps_97b3281df450045e5d3fe2122cc26e39_page_2d870c2a88ee1f0b68d1e2a13b4d61f5",
+                        "value": "object_PRDYZ_cmps_97b3281df450045e5d3fe2122cc26e39_page_2d870c2a88ee1f0b68d1e2a13b4d61f5_rule_1c70c9ba-fc70-21ee-a7ce-e2d48d152bbf",
+                        "component_id": "2e784956-49d1-025b-efe7-631ca2f8521d",
+                        "handleType": "onlyView"
+                    }
+                ]
+            },
+            "text": "部门领导审批",
+            "remark": "",
+            "id": "1ca51b31-bfab-4e87-bb0e-177bd9e380e2"
+        },
+        {
+            "left": 1028,
+            "top": 310,
+            "w": 190,
+            "h": 56,
+            "type": "task",
+            "parameters": {
+                "taskName": "办结",
+                "withdrawFlag": "0",
+                "batchFlag": "0",
+                "transferFlag": "0",
+                "voteFlag": "0",
+                "layoutId": "",
+                "groupId": "",
+                "approvalProxy": "",
+                "rejectProxy": "",
+                "tempSaveProxy": "",
+                "chooseUserType": "1",
+                "chooseUserPageFlag": "0",
+                "chooseUserPageType": "1",
+                "chooseUserDialogFlag": "0",
+                "chooseUserDialogType": "1",
+                "flowSql": "",
+                "handleSql": "select CREATE_USER USER_CODE_LIST\nfrom sys_app_wf_instance sawi \nwhere INSTANCE_ID = #{INSTANCE_ID}\n",
+                "singleLayoutAry": [
+                    {
+                        "key": "object_PRDYZ",
+                        "value": "object_PRDYZ_cmps_ec2d5a5850887985c0d604c86928b867"
+                    },
+                    {
+                        "key": "object_PRDYZ_cmps_ec2d5a5850887985c0d604c86928b867_page_1d3136e34431e7dc33b8ce8481e402ef",
+                        "value": "object_PRDYZ_cmps_ec2d5a5850887985c0d604c86928b867_page_1d3136e34431e7dc33b8ce8481e402ef_rule_23339f4a-17f6-881c-371f-7a7cc2522d7b",
+                        "component_id": "91e3ea1d-0e9f-5f4f-111e-19ac5ede7906",
+                        "handleType": "onlyView"
+                    },
+                    {
+                        "key": "object_PRDYZ_cmps_ec2d5a5850887985c0d604c86928b867_page_429b4639fce69a38828961c42822302c",
+                        "value": "object_PRDYZ_cmps_ec2d5a5850887985c0d604c86928b867_page_429b4639fce69a38828961c42822302c_rule_960010f8-b7aa-cb3e-6023-e9e238a7c806",
+                        "component_id": "b2bfc83c-a0a0-b17e-dc23-2101483199fc",
+                        "handleType": "onlyView"
+                    },
+                    {
+                        "key": "object_PRDYZ_cmps_ec2d5a5850887985c0d604c86928b867_page_1d3136e34431e7dc33b8ce8481e402ef",
+                        "value": "object_PRDYZ_cmps_ec2d5a5850887985c0d604c86928b867_page_1d3136e34431e7dc33b8ce8481e402ef_rule_10da5511-d2d2-5aed-07ac-2618654ee325",
+                        "component_id": "d819c264-0399-93f8-c92e-c75b6d4d319c",
+                        "handleType": "onlyView"
+                    },
+                    {
+                        "key": "object_PRDYZ_cmps_ec2d5a5850887985c0d604c86928b867_page_2d870c2a88ee1f0b68d1e2a13b4d61f5",
+                        "value": "object_PRDYZ_cmps_ec2d5a5850887985c0d604c86928b867_page_2d870c2a88ee1f0b68d1e2a13b4d61f5_rule_1c70c9ba-fc70-21ee-a7ce-e2d48d152bbf",
+                        "component_id": "137beb52-1817-ba52-a37f-7812ac903595",
+                        "handleType": "onlyView"
+                    },
+                    {
+                        "key": "object_PRDYZ_cmps_ec2d5a5850887985c0d604c86928b867_page_79cef63848730f7bf8067f10b46eb411",
+                        "value": "object_PRDYZ_cmps_ec2d5a5850887985c0d604c86928b867_page_79cef63848730f7bf8067f10b46eb411_rule_32150b93-496d-7659-3703-1108c3cbdd15",
+                        "component_id": "8d937b51-a953-1c3a-dda1-b12680e33502",
+                        "handleType": "needSave"
+                    }
+                ],
+                "multipleLayoutList": [],
+                "multipleLayoutMpSql": "",
+                "componentAry": [],
+                "suggestionData": {
+                    "inputTitle": "",
+                    "placeholderSuggest": "同意",
+                    "inputEnabled": "1",
+                    "inputRequiredFlag": "0",
+                    "selectTitle": "",
+                    "selectEnabled": "",
+                    "selectRequiredFlag": "",
+                    "selectOptions": []
+                },
+                "voteSuggestionData": {
+                    "inputTitle": "",
+                    "placeholderSuggest": "",
+                    "inputEnabled": "",
+                    "inputRequiredFlag": "",
+                    "selectTitle": "",
+                    "selectEnabled": "",
+                    "selectRequiredFlag": "",
+                    "selectOptions": []
+                },
+                "taskSort": 1,
+                "taskId": "af9bc2ea-4789-4d25-97b4-0076d3dd0ca3",
+                "urgingFlag": "",
+                "rejectSuggestionData": {
+                    "defaultSuggestion": ""
+                }
+            },
+            "text": "办结",
+            "remark": "",
+            "id": "af9bc2ea-4789-4d25-97b4-0076d3dd0ca3"
+        },
+        {
+            "left": 755,
+            "top": 170,
+            "w": 190,
+            "h": 56,
+            "type": "task",
+            "parameters": {
+                "taskName": "提交公司审批",
+                "withdrawFlag": "0",
+                "batchFlag": "0",
+                "transferFlag": "0",
+                "voteFlag": "0",
+                "layoutId": "",
+                "groupId": "",
+                "approvalProxy": "",
+                "rejectProxy": "",
+                "tempSaveProxy": "",
+                "chooseUserType": "1",
+                "chooseUserPageFlag": "0",
+                "chooseUserPageType": "1",
+                "chooseUserDialogFlag": "0",
+                "chooseUserDialogType": "1",
+                "flowSql": "",
+                "handleSql": "",
+                "singleLayoutAry": [
+                    {
+                        "key": "object_PRDYZ",
+                        "value": "object_PRDYZ_cmps_87ea2bf280919f374180df6d1e0e5f98"
+                    },
+                    {
+                        "key": "object_PRDYZ_cmps_87ea2bf280919f374180df6d1e0e5f98_page_1d3136e34431e7dc33b8ce8481e402ef",
+                        "value": "object_PRDYZ_cmps_87ea2bf280919f374180df6d1e0e5f98_page_1d3136e34431e7dc33b8ce8481e402ef_rule_8d0b5665-06d4-bfa8-803d-3b6099ad71ac",
+                        "component_id": "91e3ea1d-0e9f-5f4f-111e-19ac5ede7906",
+                        "handleType": "onlyView"
+                    },
+                    {
+                        "key": "object_PRDYZ_cmps_87ea2bf280919f374180df6d1e0e5f98_page_429b4639fce69a38828961c42822302c",
+                        "value": "object_PRDYZ_cmps_87ea2bf280919f374180df6d1e0e5f98_page_429b4639fce69a38828961c42822302c_rule_960010f8-b7aa-cb3e-6023-e9e238a7c806",
+                        "component_id": "b2bfc83c-a0a0-b17e-dc23-2101483199fc",
+                        "handleType": "onlyView"
+                    },
+                    {
+                        "key": "object_PRDYZ_cmps_87ea2bf280919f374180df6d1e0e5f98_page_1d3136e34431e7dc33b8ce8481e402ef",
+                        "value": "object_PRDYZ_cmps_87ea2bf280919f374180df6d1e0e5f98_page_1d3136e34431e7dc33b8ce8481e402ef_rule_f2cbe997-ee19-1427-ff4e-f5c58941fb90",
+                        "component_id": "d819c264-0399-93f8-c92e-c75b6d4d319c",
+                        "handleType": "onlyView"
+                    },
+                    {
+                        "key": "object_PRDYZ_cmps_87ea2bf280919f374180df6d1e0e5f98_page_2d870c2a88ee1f0b68d1e2a13b4d61f5",
+                        "value": "object_PRDYZ_cmps_87ea2bf280919f374180df6d1e0e5f98_page_2d870c2a88ee1f0b68d1e2a13b4d61f5_rule_1c70c9ba-fc70-21ee-a7ce-e2d48d152bbf",
+                        "component_id": "137beb52-1817-ba52-a37f-7812ac903595",
+                        "handleType": "onlyView"
+                    }
+                ],
+                "multipleLayoutList": [],
+                "multipleLayoutMpSql": "",
+                "componentAry": [],
+                "suggestionData": {
+                    "inputTitle": "",
+                    "placeholderSuggest": "同意",
+                    "inputEnabled": "1",
+                    "inputRequiredFlag": "0",
+                    "selectTitle": "",
+                    "selectEnabled": "",
+                    "selectRequiredFlag": "",
+                    "selectOptions": []
+                },
+                "voteSuggestionData": {
+                    "inputTitle": "",
+                    "placeholderSuggest": "",
+                    "inputEnabled": "",
+                    "inputRequiredFlag": "",
+                    "selectTitle": "",
+                    "selectEnabled": "",
+                    "selectRequiredFlag": "",
+                    "selectOptions": []
+                },
+                "taskSort": 1,
+                "taskId": "af978717-fd39-4a1e-8685-93fb803d7846",
+                "urgingFlag": "",
+                "rejectSuggestionData": {
+                    "defaultSuggestion": ""
+                },
+                "mobileSingleLayoutAry": [
+                    {
+                        "key": "object_PRDYZ",
+                        "value": "object_PRDYZ_cmps_97b3281df450045e5d3fe2122cc26e39"
+                    },
+                    {
+                        "key": "object_PRDYZ_cmps_97b3281df450045e5d3fe2122cc26e39_page_1d3136e34431e7dc33b8ce8481e402ef",
+                        "value": "object_PRDYZ_cmps_97b3281df450045e5d3fe2122cc26e39_page_1d3136e34431e7dc33b8ce8481e402ef_rule_e1bce31a-d2d2-0b5e-f35e-d2b0dcc7ed2b",
+                        "component_id": "936c6b08-e893-8048-652c-a244a2e56eba",
+                        "handleType": "onlyView"
+                    },
+                    {
+                        "key": "object_PRDYZ_cmps_97b3281df450045e5d3fe2122cc26e39_page_429b4639fce69a38828961c42822302c",
+                        "value": "object_PRDYZ_cmps_97b3281df450045e5d3fe2122cc26e39_page_429b4639fce69a38828961c42822302c_rule_c85819a5-8dff-c070-2328-314e61738e21",
+                        "component_id": "9186f9b7-52a0-4e94-3aaa-1fb603e482b4",
+                        "handleType": "onlyView"
+                    },
+                    {
+                        "key": "object_PRDYZ_cmps_97b3281df450045e5d3fe2122cc26e39_page_2d870c2a88ee1f0b68d1e2a13b4d61f5",
+                        "value": "object_PRDYZ_cmps_97b3281df450045e5d3fe2122cc26e39_page_2d870c2a88ee1f0b68d1e2a13b4d61f5_rule_1c70c9ba-fc70-21ee-a7ce-e2d48d152bbf",
+                        "component_id": "2e784956-49d1-025b-efe7-631ca2f8521d",
+                        "handleType": "onlyView"
+                    }
+                ]
+            },
+            "text": "提交公司审批",
+            "remark": "",
+            "id": "af978717-fd39-4a1e-8685-93fb803d7846"
+        },
+        {
+            "left": 1025,
+            "top": 170,
+            "w": 190,
+            "h": 56,
+            "type": "task",
+            "parameters": {
+                "taskName": "公司领导审批",
+                "withdrawFlag": "0",
+                "batchFlag": "0",
+                "transferFlag": "0",
+                "voteFlag": "0",
+                "layoutId": "",
+                "groupId": "",
+                "approvalProxy": "",
+                "rejectProxy": "",
+                "tempSaveProxy": "",
+                "chooseUserType": "1",
+                "chooseUserPageFlag": "0",
+                "chooseUserPageType": "1",
+                "chooseUserDialogFlag": "0",
+                "chooseUserDialogType": "1",
+                "flowSql": "",
+                "handleSql": "select LEADER USER_CODE_LIST\nfrom sys_rbac_depart srd \nwhere DEPT_O_CODE ='H10107'",
+                "singleLayoutAry": [
+                    {
+                        "key": "object_PRDYZ",
+                        "value": "object_PRDYZ_cmps_87ea2bf280919f374180df6d1e0e5f98"
+                    },
+                    {
+                        "key": "object_PRDYZ_cmps_87ea2bf280919f374180df6d1e0e5f98_page_1d3136e34431e7dc33b8ce8481e402ef",
+                        "value": "object_PRDYZ_cmps_87ea2bf280919f374180df6d1e0e5f98_page_1d3136e34431e7dc33b8ce8481e402ef_rule_8d0b5665-06d4-bfa8-803d-3b6099ad71ac",
+                        "component_id": "91e3ea1d-0e9f-5f4f-111e-19ac5ede7906",
+                        "handleType": "onlyView"
+                    },
+                    {
+                        "key": "object_PRDYZ_cmps_87ea2bf280919f374180df6d1e0e5f98_page_429b4639fce69a38828961c42822302c",
+                        "value": "object_PRDYZ_cmps_87ea2bf280919f374180df6d1e0e5f98_page_429b4639fce69a38828961c42822302c_rule_960010f8-b7aa-cb3e-6023-e9e238a7c806",
+                        "component_id": "b2bfc83c-a0a0-b17e-dc23-2101483199fc",
+                        "handleType": "onlyView"
+                    },
+                    {
+                        "key": "object_PRDYZ_cmps_87ea2bf280919f374180df6d1e0e5f98_page_1d3136e34431e7dc33b8ce8481e402ef",
+                        "value": "object_PRDYZ_cmps_87ea2bf280919f374180df6d1e0e5f98_page_1d3136e34431e7dc33b8ce8481e402ef_rule_f2cbe997-ee19-1427-ff4e-f5c58941fb90",
+                        "component_id": "d819c264-0399-93f8-c92e-c75b6d4d319c",
+                        "handleType": "onlyView"
+                    },
+                    {
+                        "key": "object_PRDYZ_cmps_87ea2bf280919f374180df6d1e0e5f98_page_2d870c2a88ee1f0b68d1e2a13b4d61f5",
+                        "value": "object_PRDYZ_cmps_87ea2bf280919f374180df6d1e0e5f98_page_2d870c2a88ee1f0b68d1e2a13b4d61f5_rule_1c70c9ba-fc70-21ee-a7ce-e2d48d152bbf",
+                        "component_id": "137beb52-1817-ba52-a37f-7812ac903595",
+                        "handleType": "onlyView"
+                    }
+                ],
+                "multipleLayoutList": [],
+                "multipleLayoutMpSql": "",
+                "componentAry": [],
+                "suggestionData": {
+                    "inputTitle": "",
+                    "placeholderSuggest": "同意",
+                    "inputEnabled": "1",
+                    "inputRequiredFlag": "0",
+                    "selectTitle": "",
+                    "selectEnabled": "",
+                    "selectRequiredFlag": "",
+                    "selectOptions": []
+                },
+                "voteSuggestionData": {
+                    "inputTitle": "",
+                    "placeholderSuggest": "",
+                    "inputEnabled": "",
+                    "inputRequiredFlag": "",
+                    "selectTitle": "",
+                    "selectEnabled": "",
+                    "selectRequiredFlag": "",
+                    "selectOptions": []
+                },
+                "taskSort": 1,
+                "taskId": "c7547f70-ef30-41f6-b3b0-d4c4a6ca54a3",
+                "urgingFlag": "",
+                "rejectSuggestionData": {
+                    "defaultSuggestion": ""
+                },
+                "mobileSingleLayoutAry": [
+                    {
+                        "key": "object_PRDYZ",
+                        "value": "object_PRDYZ_cmps_97b3281df450045e5d3fe2122cc26e39"
+                    },
+                    {
+                        "key": "object_PRDYZ_cmps_97b3281df450045e5d3fe2122cc26e39_page_1d3136e34431e7dc33b8ce8481e402ef",
+                        "value": "object_PRDYZ_cmps_97b3281df450045e5d3fe2122cc26e39_page_1d3136e34431e7dc33b8ce8481e402ef_rule_e1bce31a-d2d2-0b5e-f35e-d2b0dcc7ed2b",
+                        "component_id": "936c6b08-e893-8048-652c-a244a2e56eba",
+                        "handleType": "onlyView"
+                    },
+                    {
+                        "key": "object_PRDYZ_cmps_97b3281df450045e5d3fe2122cc26e39_page_429b4639fce69a38828961c42822302c",
+                        "value": "object_PRDYZ_cmps_97b3281df450045e5d3fe2122cc26e39_page_429b4639fce69a38828961c42822302c_rule_c85819a5-8dff-c070-2328-314e61738e21",
+                        "component_id": "9186f9b7-52a0-4e94-3aaa-1fb603e482b4",
+                        "handleType": "onlyView"
+                    },
+                    {
+                        "key": "object_PRDYZ_cmps_97b3281df450045e5d3fe2122cc26e39_page_2d870c2a88ee1f0b68d1e2a13b4d61f5",
+                        "value": "object_PRDYZ_cmps_97b3281df450045e5d3fe2122cc26e39_page_2d870c2a88ee1f0b68d1e2a13b4d61f5_rule_1c70c9ba-fc70-21ee-a7ce-e2d48d152bbf",
+                        "component_id": "2e784956-49d1-025b-efe7-631ca2f8521d",
+                        "handleType": "onlyView"
+                    }
+                ]
+            },
+            "text": "公司领导审批",
+            "remark": "",
+            "id": "c7547f70-ef30-41f6-b3b0-d4c4a6ca54a3"
+        }
+    ],
+    "edges": [
+        {
+            "source": "ae0ea128-0988-43a9-ac42-4587ce21612a",
+            "target": "0cff1d3a-ad7e-4eff-8138-c8c79e5be303",
+            "data": {
+                "label": "",
+                "id": "0d937900-dbc8-49a6-b05d-381c60a55ee7",
+                "type": "default",
+                "parameters": {
+                    "connectionName": "",
+                    "aroundFlag": "1",
+                    "defaultFlag": "0",
+                    "brax": "0",
+                    "expRight": ""
+                }
+            }
+        },
+        {
+            "source": "0cff1d3a-ad7e-4eff-8138-c8c79e5be303",
+            "target": "7ee07911-267d-4dbc-8e9a-5b7a05e9b33c",
+            "data": {
+                "label": "",
+                "id": "640d5d5a-3059-451c-af98-51fb75071234",
+                "type": "default",
+                "parameters": {
+                    "connectionName": "",
+                    "aroundFlag": "1",
+                    "defaultFlag": "0",
+                    "brax": "0",
+                    "expRight": ""
+                }
+            }
+        },
+        {
+            "source": "7ee07911-267d-4dbc-8e9a-5b7a05e9b33c",
+            "target": "1ca51b31-bfab-4e87-bb0e-177bd9e380e2",
+            "data": {
+                "label": "",
+                "id": "1e39ec74-4da5-485a-9132-039ccfb4315a",
+                "type": "default",
+                "parameters": {
+                    "connectionName": "",
+                    "aroundFlag": "1",
+                    "defaultFlag": "0",
+                    "brax": "0",
+                    "expRight": ""
+                }
+            }
+        },
+        {
+            "source": "1ca51b31-bfab-4e87-bb0e-177bd9e380e2",
+            "target": "af978717-fd39-4a1e-8685-93fb803d7846",
+            "data": {
+                "label": "",
+                "id": "c63ee625-179a-4b30-9c55-f0bebc3fe230",
+                "type": "default",
+                "parameters": {
+                    "connectionName": "",
+                    "aroundFlag": "1",
+                    "defaultFlag": "0",
+                    "brax": "0",
+                    "expRight": ""
+                }
+            }
+        },
+        {
+            "source": "af9bc2ea-4789-4d25-97b4-0076d3dd0ca3",
+            "target": "37412a0c-c5cd-4af1-bd96-bda89064e3b6",
+            "data": {
+                "label": "",
+                "id": "fa4d4be3-4742-4cfe-8559-5f18c63cdb99",
+                "type": "default",
+                "parameters": {
+                    "connectionName": "",
+                    "aroundFlag": "1",
+                    "defaultFlag": "0",
+                    "brax": "0",
+                    "expRight": ""
+                }
+            },
+            "geometry": {
+                "segments": [
+                    [
+                        1260,
+                        348
+                    ],
+                    [
+                        1425.5,
+                        348
+                    ],
+                    [
+                        1425.5,
+                        258
+                    ]
+                ],
+                "source": [
+                    1230,
+                    348,
+                    1,
+                    0.5,
+                    1,
+                    0
+                ],
+                "target": [
+                    1425.5,
+                    228,
+                    0.5,
+                    1,
+                    0,
+                    1
+                ]
+            }
+        },
+        {
+            "source": "af978717-fd39-4a1e-8685-93fb803d7846",
+            "target": "c7547f70-ef30-41f6-b3b0-d4c4a6ca54a3",
+            "data": {
+                "label": "",
+                "id": "1c623bd2-01f8-4a12-8168-00ad9ea77d99",
+                "type": "default",
+                "parameters": {
+                    "connectionName": "",
+                    "aroundFlag": "1",
+                    "defaultFlag": "0",
+                    "brax": "0",
+                    "expRight": ""
+                }
+            }
+        },
+        {
+            "source": "c7547f70-ef30-41f6-b3b0-d4c4a6ca54a3",
+            "target": "37412a0c-c5cd-4af1-bd96-bda89064e3b6",
+            "data": {
+                "label": "",
+                "id": "44004e22-501f-4482-bb3a-4e6e407b54c5",
+                "type": "default",
+                "parameters": {
+                    "connectionName": "",
+                    "aroundFlag": "1",
+                    "defaultFlag": "0",
+                    "brax": "0",
+                    "expRight": ""
+                }
+            }
+        }
+    ],
+    "ports": [],
+    "groups": []
+}
