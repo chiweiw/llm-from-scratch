@@ -69,37 +69,31 @@ CONFIG = {
     # 多服务器配置：每个节点独立配置上传目录与重启脚本
     "servers": [
         {
-            # 主机地址
-            "host": "192.168.8.26",
-            # SSH 端口
+            "host": "192.168.8.243",
             "port": 22221,
-            # 登录用户
-            "username": "omp",
-            # 登录口令（明文）
-            "password": "cB7JzLsk",
-            # 远端部署目录（需具备写权限）
-            "remote_dir": "/home/omp/shanguotou/jar/",
-            # 重启脚本路径（需具备执行权限）
-            "restart_sh_cmd": "/home/omp/shanguotou/jar/restart_jar_dev.sh",
-            # 是否在部署后执行重启脚本
+            "username": "plat",
+            "password": "ch@JY74w",
+            "remote_dir": "/data/testShanguotou/jar/",
+            "restart_sh_cmd": "/data/testShanguotou/jar/restart_jar_test.sh",
             "enable_restart": True,
-            # 是否使用 sudo 执行重启脚本（需免密 sudo）
-            "use_sudo": False
+            "use_sudo": True
+        },
+        {
+            "host": "192.168.8.242",
+            "port": 22221,
+            "username": "plat",
+            "password": "ch@JY74w",
+            "remote_dir": "/data/testShanguotou/jar/",
+            "restart_sh_cmd": "/data/testShanguotou/jar/restart_jar_test.sh",
+            "enable_restart": True,
+            "use_sudo": True
         }
     ],
     # 目标文件配置：本地 Jar 与远端部署文件名的映射
     "targets": [
         {
-            # 本地打包后生成的 Jar 相对路径（相对于 project_root）
             "jar_path": r"startup\platform-startup-project\target\platform-startup-project.jar",
-            # 部署到远端后的文件名（如不设置，则默认与本地 Jar 同名）
-            # "remote_name": "platform-startup-project.jar",
-        },
-        {
-            "jar_path": r"startup\platform-startup-system\target\platform-startup-system.jar",
-        },
-        {
-            "jar_path": r"startup\platform-startup-customer\target\platform-startup-customer.jar",
+            "remote_name": "platform-startup-project-test.jar"
         }
     ],
     # 全流程超时时间（秒）
@@ -123,7 +117,7 @@ def setup_logging(cfg):
     global GLOBAL_LOG_PATH
     ts = __import__("time").strftime("%Y%m%d_%H%M%S", __import__("time").localtime())
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    GLOBAL_LOG_PATH = os.path.join(script_dir, f"deploy_dev_{ts}.log")
+    GLOBAL_LOG_PATH = os.path.join(script_dir, f"deploy_test_{ts}.log")
     root = logging.getLogger()
     root.handlers = []
     root.setLevel(logging.DEBUG)
