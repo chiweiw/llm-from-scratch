@@ -6,31 +6,87 @@ import subprocess
 import socket
 import posixpath
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s", handlers=[logging.StreamHandler(sys.stdout)])
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)],
+)
 logger = logging.getLogger(__name__)
 
 CONFIG = {
+    # 本地环境相关配置：用于 Maven 打包与本地路径解析
     "local": {
-        "project_root": r"D:\your_actual_project",
-        "mvn_params": ["clean", "package", "-DskipTests", "-s", r"D:\java_tools\apache-maven-3.9.12\conf\settings_sgt0903.xml", "-Dmaven.repo.local=D:\m2\repository"]
+        # 项目根目录：必须包含 pom.xml
+        "project_root": r"D:\javaproject\backcode",
+        # Maven 命令参数数组：可在此设置 settings 与本地仓库路径
+        "mvn_params": [
+            "clean",
+            "package",
+            "-DskipTests",  # 跳过单元测试
+            "-s",  # 指定 settings 文件（紧随其后是路径）
+            r"D:\java_tools\apache-maven-3.9.12\conf\settings_sgt0903.xml",
+            r"-Dmaven.repo.local=D:\m2\repository",  # 指定本地 Maven 仓库
+        ],
+        # JDK 安装路径：可填 JDK 根或其 bin 目录；优先使用此路径进行编译环境配置
+        "java_home": r"C:\Program Files\Java\jdk1.8.0_202\bin",
+        # 是否使用安静模式（-q）：仅在 compact_mvn_log=True 时启用
+        "mvn_quiet": True,
+        # 控制台是否精简 Maven 日志：True 打印摘要；False 打印完整 STDOUT
+        "compact_mvn_log": False,
+        # 是否显式指定 pom 文件（-f <path>/pom.xml）：对齐 IDEA 行为
+        "mvn_use_f_pom": True,
+        # 是否离线构建（-o/--offline）：仅使用本地仓库，不访问远端
+        "mvn_offline": True,
     },
-    "server": {
-        "host": "192.168.8.26",
-        "port": 22,
-        "username": "ch",
-        "password": "your_password",
-        "restart_sh_cmd": "/opt/app/restart.sh"
-    },
-    "targets": [
+    # 服务器相关配置：用于上传与远程重启
+    # "server": {
+    #     # 主机地址
+    #     "host": "192.168.8.26",
+    #     # SSH 端口
+    #     "port": 22221,
+    #     # 登录用户
+    #     "username": "omp",
+    #     # 登录口令（明文）
+    #     "password": "cB7JzLsk",
+    #     # 远程重启脚本路径（需具备执行权限）
+    #     "restart_sh_cmd": "/home/omp/shanguotou/jar/restart_jar_dev.sh",
+    #     # 是否在部署后执行重启脚本
+    #     "enable_restart": True,
+    # },
+    "servers": [
         {
-            "jar_name": "trust-fund-1.0.jar",
-            "remote_dir": "/opt/app/",
-            "remote_name": "trust-fund.jar"
+            "host": "192.168.8.26",
+            "port": 22221,
+            "username": "omp",
+            "password": "cB7JzLsk",
+            "remote_dir": "/home/omp/shanguotou/jar/",
+            "restart_sh_cmd": "/home/omp/shanguotou/jar/restart_jar_dev.sh",
+            "enable_restart": True
         }
     ],
+    # 目标文件配置：本地 Jar 与远端部署文件名的映射
+    "targets": [
+        {
+            # 本地打包后生成的 Jar 相对路径（相对于 project_root）
+            "jar_path": r"startup\platform-startup-project\target\platform-startup-project.jar",
+            # 部署到远端后的文件名（如不设置，则默认与本地 Jar 同名）
+            # "remote_name": "platform-startup-project.jar",
+        },
+        {
+            "jar_path": r"startup\platform-startup-system\target\platform-startup-system.jar",
+        },
+        {
+            "jar_path": r"startup\platform-startup-customer\target\platform-startup-customer.jar",
+        }
+    ],
+    # 全流程超时时间（秒）
     "timeout": 600,
-    "dry_run": False
+    # 干跑模式：仅做自检，不执行打包与后续步骤
+    "dry_run": False,
+    # 备份前是否清理旧备份文件（*.bak）
+    "backup_cleanup": True,
 }
+
 
 def resolve_mvn_cmd():
     """
@@ -44,6 +100,7 @@ def resolve_mvn_cmd():
         return cmd
     cmd = shutil.which("mvn")
     return cmd
+
 
 def parse_mvn_settings(params):
     """
@@ -60,6 +117,7 @@ def parse_mvn_settings(params):
         if isinstance(p, str) and p.startswith("-Dmaven.repo.local="):
             repo_local = p.split("=", 1)[1]
     return settings_path, repo_local
+
 
 def ensure_local_paths(settings_path, repo_local):
     """
@@ -79,6 +137,7 @@ def ensure_local_paths(settings_path, repo_local):
             return False
     return True
 
+
 def check_project_root(project_root):
     """
     方法: 校验项目根目录与 pom.xml
@@ -95,6 +154,7 @@ def check_project_root(project_root):
         return False
     return True
 
+
 def ping_host(host):
     """
     方法: 检查服务器网络连通性 (ping)
@@ -107,10 +167,13 @@ def ping_host(host):
             cmd = ["ping", "-n", "1", "-w", "1000", host]
         else:
             cmd = ["ping", "-c", "1", "-W", "1", host]
-        r = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        r = subprocess.run(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+        )
         return r.returncode == 0
     except Exception:
         return False
+
 
 def check_port_open(host, port, timeout):
     """
@@ -125,6 +188,71 @@ def check_port_open(host, port, timeout):
     except Exception:
         return False
 
+
+def ensure_jdk(cfg):
+    """
+    方法: 检测并设置 JDK 环境
+    参数: cfg(dict)
+    返回: bool - 是否可用
+    说明: 校验 javac 存在，输出 Java 与 Javac 版本，并设置 JAVA_HOME 与 PATH
+    """
+    is_win = os.name == "nt"
+    javac_name = "javac.exe" if is_win else "javac"
+    java_name = "java.exe" if is_win else "java"
+    java_home_cfg = cfg.get("local", {}).get("java_home")
+    javac_path = shutil.which("javac")
+    java_path = shutil.which("java")
+    resolved_home = None
+    if not javac_path and java_home_cfg and os.path.isdir(java_home_cfg):
+        base = os.path.basename(java_home_cfg).lower()
+        if base == "bin":
+            bin_dir = java_home_cfg
+            candidate = os.path.join(bin_dir, javac_name)
+            if os.path.isfile(candidate):
+                javac_path = candidate
+                resolved_home = os.path.dirname(bin_dir)
+        else:
+            candidate = os.path.join(java_home_cfg, "bin", javac_name)
+            if os.path.isfile(candidate):
+                javac_path = candidate
+                resolved_home = java_home_cfg
+    if javac_path and not resolved_home:
+        bin_dir = os.path.dirname(javac_path)
+        parent = os.path.dirname(bin_dir)
+        if os.path.isdir(parent):
+            resolved_home = parent
+    if not javac_path:
+        logger.error("未检测到 JDK 编译器(javac)，请安装 JDK 或配置 CONFIG.local.java_home / 环境变量 JAVA_HOME")
+        return False
+    if resolved_home:
+        os.environ["JAVA_HOME"] = resolved_home
+        bin_path = os.path.join(resolved_home, "bin")
+        current_path = os.environ.get("PATH", "")
+        paths = current_path.split(os.pathsep) if current_path else []
+        if bin_path not in paths:
+            os.environ["PATH"] = bin_path + os.pathsep + current_path
+    java_cmd = java_path or (os.path.join(os.environ.get("JAVA_HOME", ""), "bin", java_name))
+    def run_ver(cmd):
+        try:
+            r = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            out = (r.stdout.strip() + "\n" + r.stderr.strip()).strip()
+            return r.returncode, out
+        except Exception as e:
+            return -1, str(e)
+    code_java, ver_java = run_ver([java_cmd, "-version"]) if java_cmd else (-1, "")
+    code_javac, ver_javac = run_ver([javac_path, "-version"])
+    logger.info(f"JAVA_HOME: {os.environ.get('JAVA_HOME') or '(未设置)'}")
+    logger.info(f"java 路径: {java_cmd or '(未知)'}")
+    logger.info(f"javac 路径: {javac_path}")
+    if ver_java:
+        logger.info(f"Java 版本: {ver_java}")
+    if ver_javac:
+        logger.info(f"Javac 版本: {ver_javac}")
+    if code_javac != 0:
+        logger.error("JDK 编译器不可用")
+        return False
+    return True
+
 def get_password(cfg):
     """
     方法: 获取服务器密码（明文）
@@ -137,6 +265,7 @@ def get_password(cfg):
         return pwd
     logger.error("未提供服务器明文密码，请在 CONFIG.server.password 中填写。")
     return None
+
 
 def connect_ssh(host, port, username, password, timeout):
     """
@@ -153,11 +282,20 @@ def connect_ssh(host, port, username, password, timeout):
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     try:
-        client.connect(hostname=host, port=port, username=username, password=password, timeout=timeout, allow_agent=False, look_for_keys=False)
+        client.connect(
+            hostname=host,
+            port=port,
+            username=username,
+            password=password,
+            timeout=timeout,
+            allow_agent=False,
+            look_for_keys=False,
+        )
         return client
     except Exception as e:
         logger.error(f"SSH 登录失败: {e}")
         return None
+
 
 def ensure_remote_dir(sftp, remote_dir):
     """
@@ -193,6 +331,7 @@ def ensure_remote_dir(sftp, remote_dir):
         return False
     return True
 
+
 def check_remote_script_executable(sftp, script_path):
     """
     方法: 检查远程脚本可执行性
@@ -210,7 +349,8 @@ def check_remote_script_executable(sftp, script_path):
         logger.error(f"远程脚本不存在或不可访问: {script_path}, {e}")
         return False
 
-def run_maven_build(mvn_cmd, mvn_params, project_root, timeout):
+
+def run_maven_build(mvn_cmd, mvn_params, project_root, timeout, compact_log=False):
     """
     方法: 执行 Maven 打包
     参数: mvn_cmd(str), mvn_params(list[str]), project_root(str), timeout(int)
@@ -222,21 +362,80 @@ def run_maven_build(mvn_cmd, mvn_params, project_root, timeout):
         return False
     cmd = [mvn_cmd] + mvn_params
     logger.info("开始执行 Maven 打包")
-    logger.info(" ".join(cmd))
+    logger.info(f"工作目录: {project_root}")
     try:
-        r = subprocess.run(cmd, cwd=project_root, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=timeout)
+        full_cmd = subprocess.list2cmdline(cmd)
+    except Exception:
+        full_cmd = " ".join(f'"{x}"' if " " in x else x for x in cmd)
+    logger.info(f"完整命令行: {full_cmd}")
+    try:
+        r = subprocess.run(
+            cmd,
+            cwd=project_root,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            timeout=timeout,
+        )
     except subprocess.TimeoutExpired:
         logger.error("Maven 打包超时")
         return False
     except Exception as e:
         logger.error(f"Maven 打包执行失败: {e}")
         return False
-    logger.info(r.stdout)
+    try:
+        ts = __import__("time").strftime("%Y%m%d_%H%M%S", __import__("time").localtime())
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        log_path = os.path.join(script_dir, f"mvn_build_{ts}.log")
+        with open(log_path, "w", encoding="utf-8", errors="ignore") as f:
+            f.write(f"工作目录: {project_root}\n")
+            f.write(f"完整命令行: {full_cmd}\n")
+            f.write("=== STDOUT ===\n")
+            f.write(r.stdout or "")
+            f.write("\n=== STDERR ===\n")
+            f.write(r.stderr or "")
+        logger.info(f"Maven 全量日志已写入: {log_path}")
+    except Exception as e:
+        logger.error(f"写入 Maven 日志文件失败: {e}")
+    if not compact_log:
+        logger.info(r.stdout)
+    else:
+        out = r.stdout or ""
+        lines = out.splitlines()
+        errors = [l for l in lines if l.startswith("[ERROR]")]
+        status = [l for l in lines if "BUILD SUCCESS" in l or "BUILD FAILURE" in l]
+        summary = []
+        idx = -1
+        for i, l in enumerate(lines):
+            if l.startswith("[INFO] Reactor Summary"):
+                idx = i
+                break
+        if idx != -1:
+            for j in range(idx, len(lines)):
+                summary.append(lines[j])
+                if lines[j].strip().startswith("[INFO] ------------------------------------------------------------------------") and j > idx:
+                    break
+        phase = [l for l in lines if l.startswith("[INFO] --- ")]
+        building = [l for l in lines if l.startswith("[INFO] Building ")]
+        for l in building[:10]:
+            logger.info(l)
+        for l in phase[:15]:
+            logger.info(l)
+        if summary:
+            for l in summary:
+                logger.info(l)
+        if status:
+            for l in status:
+                logger.info(l)
+        if errors:
+            for l in errors:
+                logger.error(l)
     if r.returncode != 0:
         logger.error(r.stderr)
         logger.error(f"Maven 打包失败，返回码: {r.returncode}")
         return False
     return True
+
 
 def check_jar_file(project_root, jar_name):
     """
@@ -246,13 +445,23 @@ def check_jar_file(project_root, jar_name):
     说明: 检查 target 下对应 Jar 是否存在且大小>0
     """
     p = os.path.join(project_root, "target", jar_name)
-    if not os.path.isfile(p):
-        logger.error(f"Jar 文件不存在: {p}")
-        return None
-    if os.path.getsize(p) <= 0:
-        logger.error(f"Jar 文件大小异常: {p}")
-        return None
-    return p
+    if os.path.isfile(p) and os.path.getsize(p) > 0:
+        logger.info(f"检测到 Jar: {p}")
+        return p
+    candidates = []
+    for root, dirs, files in os.walk(project_root):
+        if os.path.basename(root) == "target":
+            candidate = os.path.join(root, jar_name)
+            if os.path.isfile(candidate) and os.path.getsize(candidate) > 0:
+                candidates.append(candidate)
+    if candidates:
+        candidates.sort(key=lambda x: os.path.getmtime(x), reverse=True)
+        select = candidates[0]
+        logger.info(f"检测到多模块 Jar，使用最新文件: {select}")
+        return select
+    logger.error(f"Jar 文件不存在: {p}")
+    return None
+
 
 def upload_jar(ssh_client, local_path, remote_dir, jar_name):
     """
@@ -279,6 +488,7 @@ def upload_jar(ssh_client, local_path, remote_dir, jar_name):
         logger.error(f"上传失败: {e}")
         return False
 
+
 def exec_restart(ssh_client, cmd, timeout):
     """
     方法: 执行远程重启脚本
@@ -302,6 +512,7 @@ def exec_restart(ssh_client, cmd, timeout):
         logger.error(f"重启脚本执行异常: {e}")
         return False
 
+
 def make_rename_mapping(cfg):
     """
     方法: 更名策略映射（预留）
@@ -311,7 +522,8 @@ def make_rename_mapping(cfg):
     """
     return cfg.get("targets", [])
 
-def backup_remote_file(sftp, remote_dir, remote_name):
+
+def backup_remote_file(sftp, remote_dir, remote_name, cleanup=False):
     """
     方法: 备份远程文件
     参数: sftp(paramiko.SFTPClient), remote_dir(str), remote_name(str)
@@ -322,6 +534,19 @@ def backup_remote_file(sftp, remote_dir, remote_name):
     if not path.endswith("/"):
         path += "/"
     target = posixpath.join(path, remote_name)
+    if cleanup:
+        try:
+            dir_list = sftp.listdir(path)
+            for name in dir_list:
+                if name.startswith(remote_name + ".") and name.endswith(".bak"):
+                    bak_path = posixpath.join(path, name)
+                    try:
+                        sftp.remove(bak_path)
+                        logger.info(f"已清理旧备份: {bak_path}")
+                    except Exception as e:
+                        logger.error(f"旧备份删除失败: {bak_path}, {e}")
+        except Exception as e:
+            logger.error(f"遍历备份文件失败: {path}, {e}")
     try:
         sftp.stat(target)
     except IOError:
@@ -335,6 +560,7 @@ def backup_remote_file(sftp, remote_dir, remote_name):
     except Exception as e:
         logger.error(f"远程备份失败: {target}, {e}")
         return False
+
 
 def verify_remote_file(sftp, remote_dir, remote_name):
     """
@@ -358,6 +584,77 @@ def verify_remote_file(sftp, remote_dir, remote_name):
         return False
 
 
+def get_server_list(cfg):
+    s = cfg.get("servers")
+    if isinstance(s, list) and s:
+        return s
+    one = cfg.get("server")
+    return [one] if isinstance(one, dict) else []
+
+
+def get_password_for_server(server):
+    pwd = server.get("password")
+    if pwd and pwd != "your_password":
+        return pwd
+    logger.error("未提供服务器明文密码")
+    return None
+
+
+def precheck_server(server, mappings, timeout):
+    host = server["host"]
+    port = int(server["port"])
+    username = server["username"]
+    restart_cmd = server.get("restart_sh_cmd")
+    enable_restart = bool(server.get("enable_restart", True))
+    if not ping_host(host):
+        logger.error(f"服务器网络不可达: {host}")
+        return None
+    if not check_port_open(host, port, timeout=3):
+        logger.error(f"服务器端口不可访问: {host}:{port}")
+        return None
+    password = get_password_for_server(server)
+    if not password:
+        return None
+    ssh = connect_ssh(host, port, username, password, timeout)
+    if not ssh:
+        return None
+    try:
+        sftp = ssh.open_sftp()
+        remote_dir = server.get("remote_dir")
+        if not remote_dir:
+            logger.error("服务器未配置 remote_dir")
+            sftp.close()
+            ssh.close()
+            return None
+        if not ensure_remote_dir(sftp, remote_dir):
+            sftp.close()
+            ssh.close()
+            return None
+        if enable_restart and restart_cmd:
+            if not check_remote_script_executable(sftp, restart_cmd):
+                sftp.close()
+                ssh.close()
+                return None
+        sftp.close()
+        logger.info(f"服务器就绪: {host}:{port} 用户:{username} 重启:{enable_restart}")
+        return ssh
+    except Exception as e:
+        logger.error(f"远程资源校验失败: {e}")
+        ssh.close()
+        return None
+
+
+def start_stage_for_server(ssh, server, timeout):
+    restart_cmd = server.get("restart_sh_cmd")
+    enable_restart = bool(server.get("enable_restart", True))
+    if not enable_restart or not restart_cmd:
+        logger.info("已跳过启动阶段（按配置）")
+        return True
+    logger.info("开始启动阶段")
+    ok = exec_restart(ssh, restart_cmd, timeout)
+    if ok:
+        logger.info("启动阶段完成")
+    return ok
 
 def precheck(cfg):
     """
@@ -368,6 +665,8 @@ def precheck(cfg):
     timeout = int(cfg.get("timeout", 600))
     mvn_cmd = resolve_mvn_cmd()
     settings_path, repo_local = parse_mvn_settings(cfg["local"]["mvn_params"])
+    if not ensure_jdk(cfg):
+        sys.exit(2)
     if not ensure_local_paths(settings_path, repo_local):
         sys.exit(2)
     if not check_project_root(cfg["local"]["project_root"]):
@@ -376,6 +675,7 @@ def precheck(cfg):
     port = int(cfg["server"]["port"])
     username = cfg["server"]["username"]
     restart_cmd = cfg["server"]["restart_sh_cmd"]
+    enable_restart = bool(cfg["server"].get("enable_restart", True))
     if not ping_host(host):
         logger.error(f"服务器网络不可达: {host}")
         sys.exit(2)
@@ -391,15 +691,36 @@ def precheck(cfg):
     try:
         sftp = ssh.open_sftp()
         mappings = make_rename_mapping(cfg)
-        for t in mappings:
-            if not ensure_remote_dir(sftp, t["remote_dir"]):
-                sftp.close()
-                ssh.close()
-                sys.exit(2)
-        if not check_remote_script_executable(sftp, restart_cmd):
+        remote_dir = cfg["server"].get("remote_dir")
+        if not remote_dir:
+            logger.error("服务器未配置 remote_dir")
             sftp.close()
             ssh.close()
             sys.exit(2)
+        if not ensure_remote_dir(sftp, remote_dir):
+            sftp.close()
+            ssh.close()
+            sys.exit(2)
+        if enable_restart:
+            if not check_remote_script_executable(sftp, restart_cmd):
+                sftp.close()
+                ssh.close()
+                sys.exit(2)
+        logger.info("前置自检完成：本地与远程资源已就绪")
+        logger.info(f"Maven 可执行: {mvn_cmd}")
+        logger.info(f"项目目录: {cfg['local']['project_root']}")
+        logger.info(f"settings 文件: {settings_path or '(未配置)'}")
+        logger.info(f"本地仓库: {repo_local or '(未配置)'}")
+        logger.info(f"服务器: {host}:{port}，用户: {username}")
+        logger.info(f"重启脚本: {restart_cmd}")
+        logger.info(f"是否重启: {enable_restart}")
+        names = []
+        for x in mappings:
+            rn = x.get("remote_name")
+            if not rn:
+                rn = os.path.basename(x.get("jar_path", x.get("jar_name", "")))
+            names.append(f"{remote_dir}{rn}")
+        logger.info("目标目录与文件名: " + "; ".join(names))
         sftp.close()
     except Exception as e:
         logger.error(f"远程资源校验失败: {e}")
@@ -407,13 +728,28 @@ def precheck(cfg):
         sys.exit(2)
     return ssh
 
+
 def build_stage(cfg, mvn_cmd):
     """
     方法: 打包阶段
     返回: bool - 打包是否成功
     """
     timeout = int(cfg.get("timeout", 600))
-    return run_maven_build(mvn_cmd, cfg["local"]["mvn_params"], cfg["local"]["project_root"], timeout)
+    params = list(cfg["local"]["mvn_params"])
+    quiet = bool(cfg["local"].get("mvn_quiet"))
+    compact = bool(cfg["local"].get("compact_mvn_log"))
+    if quiet and compact and "-q" not in params:
+        params.insert(0, "-q")
+    if cfg["local"].get("mvn_use_f_pom"):
+        pom = os.path.join(cfg["local"]["project_root"], "pom.xml")
+        params += ["-f", pom]
+    if cfg["local"].get("mvn_offline"):
+        if all(x not in params for x in ("-o", "--offline")):
+            params.insert(0, "--offline")
+    return run_maven_build(
+        mvn_cmd, params, cfg["local"]["project_root"], timeout, compact_log=cfg["local"].get("compact_mvn_log", False)
+    )
+
 
 def rename_stage(cfg):
     """
@@ -422,54 +758,83 @@ def rename_stage(cfg):
     """
     return make_rename_mapping(cfg)
 
-def backup_stage(ssh, mappings):
+
+def backup_stage(ssh, remote_dir, mappings):
     """
     方法: 备份阶段
     返回: bool - 是否成功
     """
     try:
         sftp = ssh.open_sftp()
+        logger.info("开始备份阶段")
         for t in mappings:
-            if not backup_remote_file(sftp, t["remote_dir"], t.get("remote_name", t["jar_name"])):
+            rn = t.get("remote_name")
+            if not rn:
+                rn = os.path.basename(t.get("jar_path", t.get("jar_name", "")))
+            cleanup = bool(CONFIG.get("backup_cleanup", False))
+            if not backup_remote_file(
+                sftp, remote_dir, rn, cleanup=cleanup
+            ):
                 sftp.close()
                 return False
         sftp.close()
+        logger.info("备份阶段完成")
         return True
     except Exception as e:
         logger.error(f"远程备份异常: {e}")
         return False
 
-def send_stage(ssh, cfg, mappings):
+
+def send_stage(ssh, cfg, remote_dir, mappings):
     """
     方法: 发送阶段
     返回: bool - 是否成功
     """
+    logger.info("开始发送阶段")
     for t in mappings:
-        local_path = check_jar_file(cfg["local"]["project_root"], t["jar_name"])
+        local_path = None
+        if "jar_path" in t:
+            jp = t["jar_path"]
+            p = jp if os.path.isabs(jp) else os.path.join(cfg["local"]["project_root"], jp)
+            if os.path.isfile(p) and os.path.getsize(p) > 0:
+                local_path = p
+            else:
+                logger.error(f"Jar 文件不存在: {p}")
+                return False
+        else:
+            local_path = check_jar_file(cfg["local"]["project_root"], t["jar_name"])
         if not local_path:
             return False
-        remote_name = t.get("remote_name", t["jar_name"])
-        if not upload_jar(ssh, local_path, t["remote_dir"], remote_name):
+        remote_name = t.get("remote_name") or os.path.basename(local_path)
+        logger.info(f"准备上传: {local_path} -> {remote_dir}{remote_name}")
+        if not upload_jar(ssh, local_path, remote_dir, remote_name):
             return False
+    logger.info("发送阶段完成")
     return True
 
-def verify_stage(ssh, mappings):
+
+def verify_stage(ssh, remote_dir, mappings):
     """
     方法: 校验阶段
     返回: bool - 是否成功
     """
     try:
         sftp = ssh.open_sftp()
+        logger.info("开始校验阶段")
         for t in mappings:
-            remote_name = t.get("remote_name", t["jar_name"])
-            if not verify_remote_file(sftp, t["remote_dir"], remote_name):
+            remote_name = t.get("remote_name")
+            if not remote_name:
+                remote_name = os.path.basename(t.get("jar_path", t.get("jar_name", "")))
+            if not verify_remote_file(sftp, remote_dir, remote_name):
                 sftp.close()
                 return False
         sftp.close()
+        logger.info("校验阶段完成")
         return True
     except Exception as e:
         logger.error(f"远程校验异常: {e}")
         return False
+
 
 def start_stage(ssh, cfg):
     """
@@ -478,7 +843,15 @@ def start_stage(ssh, cfg):
     """
     restart_cmd = cfg["server"]["restart_sh_cmd"]
     timeout = int(cfg.get("timeout", 600))
-    return exec_restart(ssh, restart_cmd, timeout)
+    if not bool(cfg["server"].get("enable_restart", True)):
+        logger.info("已跳过启动阶段（按配置）")
+        return True
+    logger.info("开始启动阶段")
+    ok = exec_restart(ssh, restart_cmd, timeout)
+    if ok:
+        logger.info("启动阶段完成")
+    return ok
+
 
 def main():
     """
@@ -486,39 +859,98 @@ def main():
     阶段: 前置校验 -> 打包 -> 更名映射 -> 备份 -> 发送 -> 校验 -> 启动
     """
     cfg = CONFIG
-    # 前置校验
-    ssh = precheck(cfg)
+    servers = get_server_list(cfg)
+    if not servers:
+        ssh = precheck(cfg)
+        if cfg.get("dry_run"):
+            logger.info("前置校验通过，干跑结束")
+            ssh.close()
+            sys.exit(0)
+        mvn_cmd = resolve_mvn_cmd()
+        ok_build = build_stage(cfg, mvn_cmd)
+        if not ok_build:
+            ssh.close()
+            sys.exit(2)
+        logger.info("打包阶段完成")
+        mappings = rename_stage(cfg)
+        logger.info(f"更名映射阶段完成: {len(mappings)} 项")
+        remote_dir = cfg["server"].get("remote_dir")
+        if not backup_stage(ssh, remote_dir, mappings):
+            ssh.close()
+            sys.exit(2)
+        logger.info("备份阶段完成")
+        if not send_stage(ssh, cfg, remote_dir, mappings):
+            ssh.close()
+            sys.exit(2)
+        logger.info("发送阶段完成")
+        if not verify_stage(ssh, remote_dir, mappings):
+            ssh.close()
+            sys.exit(2)
+        logger.info("校验阶段完成")
+        if not start_stage(ssh, cfg):
+            ssh.close()
+            sys.exit(2)
+        logger.info("打包 - 备份 - 发送 - 校验 - 启动 全流程完成")
+        ssh.close()
+        return
+    timeout = int(cfg.get("timeout", 600))
+    mvn_cmd = resolve_mvn_cmd()
+    settings_path, repo_local = parse_mvn_settings(cfg["local"]["mvn_params"])
+    if not ensure_jdk(cfg):
+        sys.exit(2)
+    if not ensure_local_paths(settings_path, repo_local):
+        sys.exit(2)
+    if not check_project_root(cfg["local"]["project_root"]):
+        sys.exit(2)
+    mappings = rename_stage(cfg)
+    conns = []
+    for srv in servers:
+        ssh = precheck_server(srv, mappings, timeout)
+        if not ssh:
+            for c in conns:
+                c.close()
+            sys.exit(2)
+        conns.append(ssh)
     if cfg.get("dry_run"):
         logger.info("前置校验通过，干跑结束")
-        ssh.close()
+        for c in conns:
+            c.close()
         sys.exit(0)
-    # 打包
-    mvn_cmd = resolve_mvn_cmd()
     ok_build = build_stage(cfg, mvn_cmd)
     if not ok_build:
-        ssh.close()
+        for c in conns:
+            c.close()
         sys.exit(2)
-    # 更名映射
-    mappings = rename_stage(cfg)
-    # 备份
-    if not backup_stage(ssh, mappings):
-        ssh.close()
-        sys.exit(2)
-    # 发送
-    if not send_stage(ssh, cfg, mappings):
-        ssh.close()
-        sys.exit(2)
-    # 校验
-    if not verify_stage(ssh, mappings):
-        ssh.close()
-        sys.exit(2)
-    # 启动
-    if not start_stage(ssh, cfg):
-        ssh.close()
+    logger.info("打包阶段完成")
+    logger.info(f"更名映射阶段完成: {len(mappings)} 项")
+    for idx, ssh in enumerate(conns):
+        srv = servers[idx]
+        remote_dir = srv.get("remote_dir")
+        if not backup_stage(ssh, remote_dir, mappings):
+            for c in conns:
+                c.close()
+            sys.exit(2)
+        logger.info("备份阶段完成")
+        if not send_stage(ssh, cfg, remote_dir, mappings):
+            for c in conns:
+                c.close()
+            sys.exit(2)
+        logger.info("发送阶段完成")
+        if not verify_stage(ssh, remote_dir, mappings):
+            for c in conns:
+                c.close()
+            sys.exit(2)
+        logger.info("校验阶段完成")
+    ok_all = True
+    for srv, ssh in zip(servers, conns):
+        if not start_stage_for_server(ssh, srv, timeout):
+            ok_all = False
+    for c in conns:
+        c.close()
+    if not ok_all:
         sys.exit(2)
     logger.info("打包 - 备份 - 发送 - 校验 - 启动 全流程完成")
-    ssh.close()
 
-    
+
 if __name__ == "__main__":
     main()
