@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { onMounted } from 'vue';
-import { useHistoryStore } from '@/stores/history';
+import { onMounted } from "vue";
+import { useHistoryStore } from "@/stores/history";
 
 const historyStore = useHistoryStore();
 
@@ -9,7 +9,7 @@ onMounted(async () => {
 });
 
 function formatTime(timestamp: number): string {
-  return new Date(timestamp * 1000).toLocaleString('zh-CN');
+  return new Date(timestamp * 1000).toLocaleString("zh-CN");
 }
 
 function formatDuration(seconds: number): string {
@@ -23,7 +23,7 @@ function formatDuration(seconds: number): string {
 <template>
   <div class="h-full p-6">
     <h1 class="text-2xl font-bold mb-6">历史记录</h1>
-    
+
     <div class="rounded-lg border">
       <table class="w-full">
         <thead class="bg-muted/50">
@@ -36,19 +36,30 @@ function formatDuration(seconds: number): string {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="history in historyStore.histories" :key="history.id" class="border-t hover:bg-muted/30">
+          <tr
+            v-for="history in historyStore.histories"
+            :key="history.id"
+            class="border-t hover:bg-muted/30"
+          >
             <td class="px-4 py-3">{{ formatTime(history.startTime) }}</td>
             <td class="px-4 py-3">{{ history.environmentName }}</td>
             <td class="px-4 py-3">
-              <span 
+              <span
                 class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium"
                 :class="{
                   'bg-green-100 text-green-800': history.status === 'success',
                   'bg-red-100 text-red-800': history.status === 'failed',
-                  'bg-yellow-100 text-yellow-800': history.status === 'canceled',
+                  'bg-yellow-100 text-yellow-800':
+                    history.status === 'canceled',
                 }"
               >
-                {{ history.status === 'success' ? '成功' : history.status === 'failed' ? '失败' : '已取消' }}
+                {{
+                  history.status === "success"
+                    ? "成功"
+                    : history.status === "failed"
+                    ? "失败"
+                    : "已取消"
+                }}
               </span>
             </td>
             <td class="px-4 py-3">{{ formatDuration(history.duration) }}</td>

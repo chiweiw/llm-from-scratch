@@ -15,7 +15,7 @@ type SystemDefaultConfig struct {
 	MavenPath         string `json:"mavenPath"`
 	MavenSettingsPath string `json:"mavenSettingsPath"`
 	MavenRepoPath     string `json:"mavenRepoPath"`
-	MavenArgs         string `json:"mavenArgs"`
+	MavenArgs         []string `json:"mavenArgs"`
 }
 
 type AppConfig struct {

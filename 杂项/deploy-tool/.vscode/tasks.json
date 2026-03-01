@@ -1,0 +1,51 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "wails-dev",
+      "type": "shell",
+      "command": "wails",
+      "args": ["dev"],
+      "problemMatcher": [],
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "wails-build",
+      "type": "shell",
+      "command": "wails",
+      "args": ["build"],
+      "problemMatcher": ["$go"],
+      "group": "build"
+    },
+    {
+      "label": "wails-build-release",
+      "type": "shell",
+      "command": "wails",
+      "args": ["build", "-clean", "-upx"],
+      "problemMatcher": ["$go"],
+      "group": "build"
+    },
+    {
+      "label": "frontend-dev",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "dev"],
+      "options": {
+        "cwd": "${workspaceFolder}/frontend"
+      },
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    }
+  ]
+}

@@ -3,29 +3,15 @@ export interface Environment {
   name: string;
   identifier: string;
   description: string;
+  projectRoot: string;
   cloudDeploy: boolean;
   timeout: number;
-  dryRun: boolean;
   backupCleanup: boolean;
-  local: LocalConfig;
   servers: ServerConfig[];
   targetFiles: TargetFile[];
-  checkStatus?: 'pass' | 'warning' | 'error' | 'unchecked';
+  checkStatus: string;
   createdAt: number;
   updatedAt: number;
-}
-
-export interface LocalConfig {
-  projectRoot: string;
-  jdkPath: string;
-  mavenPath: string;
-  mavenSettingsPath: string;
-  mavenRepoPath: string;
-  mavenArgs: string;
-  mavenQuiet: boolean;
-  compactMvnLog: boolean;
-  specifyPom: boolean;
-  offlineBuild: boolean;
 }
 
 export interface ServerConfig {
@@ -63,26 +49,40 @@ export interface SystemDefaultConfig {
   mavenPath: string;
   mavenSettingsPath: string;
   mavenRepoPath: string;
-  mavenArgs: string;
+  mavenArgs: string[];
 }
 
 export interface DeployHistory {
   id: string;
   environmentId: string;
   environmentName: string;
-  status: 'success' | 'failed' | 'cancelled';
   startTime: number;
   endTime: number;
-  logPath: string;
-  errorMsg?: string;
+  status: string;
+  files: string[];
+  duration: number;
+  errorMessage: string;
 }
 
 export interface DeployProgress {
-  phase: 'idle' | 'checking' | 'building' | 'uploading' | 'restarting' | 'completed' | 'failed';
+  environmentId: string;
+  status: string;
+  currentStep: string;
+  totalProgress: number;
+  steps: StepProgress[];
+  currentFile: string;
+  fileProgress: number;
+  speed: string;
+  startTime: number;
+  endTime: number;
+  errorMessage: string;
+}
+
+export interface StepProgress {
+  name: string;
+  status: string;
   progress: number;
   message: string;
-  currentServer?: string;
-  currentFile?: string;
 }
 
 export interface CheckResult {
@@ -93,6 +93,6 @@ export interface CheckResult {
 
 export interface CheckItem {
   name: string;
-  status: 'pass' | 'warning' | 'error';
+  status: string;
   message: string;
 }

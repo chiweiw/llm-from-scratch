@@ -157,6 +157,314 @@ def resolve_mvn_cmd():
     return cmd
 
 
+def parse_maven_command_line(cmd_line):
+    """
+    方法: 解析 IDEA/Maven 命令行，提取配置信息
+    参数: cmd_line(str) - 完整的 Maven 命令行
+    返回: dict - 解析后的配置字典
+    说明:
+      - 支持提取 mvn 路径、settings、repo、goals 等
+      - 解析 -D 开头的属性参数
+      - 解析 -f 指定 pom 文件
+      - 支持带空格的路径
+    """
+    import shlex
+
+    result = {
+        "mvn_cmd": None,
+        "mvn_params": [],
+        "settings_path": None,
+        "repo_local": None,
+        "pom_file": None,
+        "goals": [],
+        "properties": {},
+    }
+
+    if not cmd_line or not cmd_line.strip():
+        return result
+
+    args = []
+    current = ""
+    in_quotes = False
+    in_double_quotes = False
+
+    for ch in cmd_line:
+        if ch == "'" and not in_double_quotes:
+            in_quotes = not in_quotes
+        elif ch == '"' and not in_quotes:
+            in_double_quotes = not in_double_quotes
+        elif ch == " " and not in_quotes and not in_double_quotes:
+            if current:
+                args.append(current)
+                current = ""
+            continue
+        current += ch
+
+    if current:
+        args.append(current)
+
+    args = [a for a in args if a.strip()]
+
+    if not args:
+        return result
+
+    if args[0].endswith("mvn.cmd") or args[0].endswith("mvn") or "mvn.cmd" in args[0] or "\\mvn" in args[0].replace("/", "\\") or "/mvn" in args[0]:
+        result["mvn_cmd"] = args[0]
+        args = args[1:]
+
+    i = 0
+    while i < len(args):
+        arg = args[i]
+
+        if arg == "-s" and i + 1 < len(args):
+            result["settings_path"] = args[i + 1]
+            result["mvn_params"].extend(["-s", args[i + 1]])
+            i += 2
+            continue
+        elif arg.startswith("-s="):
+            result["settings_path"] = arg[3:]
+            result["mvn_params"].append(arg)
+            i += 1
+            continue
+
+        if arg.startswith("-Dmaven.repo.local="):
+            result["repo_local"] = arg.split("=", 1)[1]
+            result["mvn_params"].append(arg)
+            i += 1
+            continue
+
+        if arg == "-f" and i + 1 < len(args):
+            result["pom_file"] = args[i + 1]
+            result["mvn_params"].extend(["-f", args[i + 1]])
+            i += 2
+            continue
+        elif arg.startswith("-f="):
+            result["pom_file"] = arg[3:]
+            result["mvn_params"].append(arg)
+            i += 1
+            continue
+
+        if arg.startswith("-D") and "=" in arg:
+            key = arg[2:].split("=", 1)[0]
+            value = arg.split("=", 1)[1]
+            result["properties"][key] = value
+            result["mvn_params"].append(arg)
+            i += 1
+            continue
+
+        if arg in ("-o", "--offline", "-q", "--quiet", "-U", "--update-snapshots", "-X", "--debug", "-B", "--batch-mode"):
+            result["mvn_params"].append(arg)
+            i += 1
+            continue
+
+        if not arg.startswith("-"):
+            result["goals"].append(arg)
+            result["mvn_params"].append(arg)
+            i += 1
+            continue
+
+        result["mvn_params"].append(arg)
+        i += 1
+
+    if result["settings_path"]:
+        result["properties"]["settings_path"] = result["settings_path"]
+    if result["repo_local"]:
+        result["properties"]["maven.repo.local"] = result["repo_local"]
+
+    return result
+
+
+def params_array_to_string(params):
+    """
+    方法: 将 Maven 参数数组转换为可读字符串
+    参数: params(list[str]) - Maven 参数数组
+    返回: str - 可读字符串格式
+    说明: 将参数数组转换为每行一个参数的格式，便于阅读
+    """
+    if not params:
+        return ""
+    lines = []
+    i = 0
+    while i < len(params):
+        p = str(params[i]).strip().replace("\r", "")
+        if p == "-s" and i + 1 < len(params):
+            lines.append(f"-s {str(params[i + 1]).strip().replace(chr(13), '')}")
+            i += 2
+        elif p == "-f" and i + 1 < len(params):
+            lines.append(f"-f {str(params[i + 1]).strip().replace(chr(13), '')}")
+            i += 2
+        elif p.startswith("-D"):
+            lines.append(p)
+            i += 1
+        else:
+            lines.append(p)
+            i += 1
+    return "\n".join(lines)
+
+
+def params_string_to_array(params_str):
+    """
+    方法: 将 Maven 参数字符串转换为数组
+    参数: params_str(str) - 每行一个参数的字符串
+    返回: list[str] - Maven 参数数组
+    说明: 将可读字符串格式转换回数组
+    """
+    if not params_str or not params_str.strip():
+        return []
+
+    lines = [l.strip() for l in params_str.split("\n") if l.strip()]
+    result = []
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        if line in ("-s", "-f") and i + 1 < len(lines):
+            result.append(line)
+            result.append(lines[i + 1])
+            i += 2
+        else:
+            result.append(line)
+            i += 1
+    return result
+
+
+def detect_jdk_from_env():
+    """
+    方法: 从环境变量检测 JDK 路径
+    参数: 无
+    返回: list[dict] - 检测到的 JDK 信息列表
+    说明:
+      - 检测 JAVA_HOME 环境变量
+      - 检测 PATH 环境变量中的 JDK 路径
+    """
+    jdks = []
+
+    java_home = os.environ.get("JAVA_HOME")
+    if java_home and os.path.isdir(java_home):
+        javac_path = os.path.join(java_home, "bin", "javac.exe" if os.name == "nt" else "javac")
+        if os.path.isfile(javac_path):
+            jdks.append({
+                "path": java_home,
+                "source": "JAVA_HOME",
+                "has_javac": True
+            })
+
+    path_var = os.environ.get("PATH", "")
+    for p in path_var.split(os.pathsep):
+        if not p:
+            continue
+        if "java" in p.lower() or "jdk" in p.lower():
+            if os.path.isdir(p):
+                parent = os.path.dirname(p)
+                if os.path.isdir(os.path.join(parent, "bin")):
+                    javac = os.path.join(parent, "bin", "javac.exe" if os.name == "nt" else "javac")
+                    if os.path.isfile(javac):
+                        jdks.append({
+                            "path": parent,
+                            "source": "PATH",
+                            "has_javac": True
+                        })
+
+    seen = {}
+    unique_jdks = []
+    for jdk in jdks:
+        if jdk["path"] not in seen:
+            seen[jdk["path"]] = True
+            unique_jdks.append(jdk)
+
+    return unique_jdks
+
+
+def detect_jdk_from_registry():
+    """
+    方法: 从 Windows 注册表检测已安装的 JDK
+    参数: 无
+    返回: list[dict] - 检测到的 JDK 信息列表
+    说明:
+      - 读取 HKLM\SOFTWARE\JavaSoft\Java Development Kit
+      - 读取 HKCU\SOFTWARE\JavaSoft\Java Development Kit
+    """
+    jdks = []
+    if os.name != "nt":
+        return jdks
+
+    try:
+        import winreg
+    except ImportError:
+        return jdks
+
+    reg_paths = [
+        (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\JavaSoft\Java Development Kit"),
+        (winreg.HKEY_CURRENT_USER, r"SOFTWARE\JavaSoft\Java Development Kit"),
+    ]
+
+    for hkey, reg_path in reg_paths:
+        try:
+            with winreg.OpenKey(hkey, reg_path) as key:
+                i = 0
+                while True:
+                    try:
+                        version = winreg.EnumKey(key, i)
+                        try:
+                            with winreg.OpenKey(key, version) as ver_key:
+                                java_home, _ = winreg.QueryValueEx(ver_key, "JavaHome")
+                                if java_home and os.path.isdir(java_home):
+                                    javac_path = os.path.join(java_home, "bin", "javac.exe")
+                                    has_javac = os.path.isfile(javac_path)
+                                    jdks.append({
+                                        "path": java_home,
+                                        "source": f"Registry ({version})",
+                                        "has_javac": has_javac,
+                                        "version": version
+                                    })
+                        except Exception:
+                            pass
+                        i += 1
+                    except OSError:
+                        break
+        except Exception:
+            pass
+
+    return jdks
+
+
+def detect_all_jdk():
+    """
+    方法: 综合检测所有可用 JDK
+    参数: 无
+    返回: list[dict] - 检测到的 JDK 信息列表
+    说明: 优先从注册表检测，再从环境变量检测
+    """
+    jdks = detect_jdk_from_registry()
+    env_jdks = detect_jdk_from_env()
+
+    seen = {}
+    for jdk in jdks:
+        seen[jdk["path"]] = True
+
+    for jdk in env_jdks:
+        if jdk["path"] not in seen:
+            jdks.append(jdk)
+            seen[jdk["path"]] = True
+
+    return jdks
+
+
+def get_best_jdk():
+    """
+    方法: 获取最佳可用 JDK
+    参数: 无
+    返回: str | None - 最佳 JDK 路径
+    说明: 优先返回带有 javac 的 JDK
+    """
+    jdks = detect_all_jdk()
+    for jdk in jdks:
+        if jdk.get("has_javac"):
+            return jdk["path"]
+    if jdks:
+        return jdks[0]["path"]
+    return None
+
+
 def parse_mvn_settings(params):
     """
     方法: 解析 Maven 参数中的 settings 与本地仓库路径
@@ -214,16 +522,21 @@ def ensure_jdk(cfg):
     方法: 检测并设置 JDK 环境
     参数: cfg(dict)
     返回: bool - 是否可用
-    说明: 校验 javac 存在，输出 Java 与 Javac 版本，并设置 JAVA_HOME 与 PATH
+    说明: 
+      - 优先使用配置中的 java_home
+      - 其次尝试自动检测（JAVA_HOME / PATH / 注册表）
+      - 输出 Java 与 Javac 版本，设置 JAVA_HOME 与 PATH
     """
     is_win = os.name == "nt"
     javac_name = "javac.exe" if is_win else "javac"
     java_name = "java.exe" if is_win else "java"
+
     java_home_cfg = cfg.get("local", {}).get("java_home")
     javac_path = shutil.which("javac")
     java_path = shutil.which("java")
     resolved_home = None
-    if not javac_path and java_home_cfg and os.path.isdir(java_home_cfg):
+
+    if java_home_cfg and os.path.isdir(java_home_cfg):
         base = os.path.basename(java_home_cfg).lower()
         if base == "bin":
             bin_dir = java_home_cfg
@@ -236,14 +549,32 @@ def ensure_jdk(cfg):
             if os.path.isfile(candidate):
                 javac_path = candidate
                 resolved_home = java_home_cfg
+
+    if not javac_path or not resolved_home:
+        logger.info("配置中未指定有效 JDK，尝试自动检测...")
+        auto_jdk = get_best_jdk()
+        if auto_jdk:
+            candidate = os.path.join(auto_jdk, "bin", javac_name)
+            if os.path.isfile(candidate):
+                javac_path = candidate
+                resolved_home = auto_jdk
+                logger.info(f"自动检测到 JDK: {resolved_home}")
+
     if javac_path and not resolved_home:
         bin_dir = os.path.dirname(javac_path)
         parent = os.path.dirname(bin_dir)
         if os.path.isdir(parent):
             resolved_home = parent
+
     if not javac_path:
+        jdks = detect_all_jdk()
+        if jdks:
+            logger.warning("未在 PATH 中找到 javac，以下是检测到的 JDK:")
+            for jdk in jdks:
+                logger.warning(f"  - {jdk['path']} (来源: {jdk['source']})")
         logger.error("未检测到 JDK 编译器(javac)，请安装 JDK 或配置 CONFIG.local.java_home / 环境变量 JAVA_HOME")
         return False
+
     if resolved_home:
         os.environ["JAVA_HOME"] = resolved_home
         bin_path = os.path.join(resolved_home, "bin")
@@ -251,7 +582,9 @@ def ensure_jdk(cfg):
         paths = current_path.split(os.pathsep) if current_path else []
         if bin_path not in paths:
             os.environ["PATH"] = bin_path + os.pathsep + current_path
+
     java_cmd = java_path or (os.path.join(os.environ.get("JAVA_HOME", ""), "bin", java_name))
+
     def run_ver(cmd):
         try:
             r = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -259,8 +592,10 @@ def ensure_jdk(cfg):
             return r.returncode, out
         except Exception as e:
             return -1, str(e)
+
     code_java, ver_java = run_ver([java_cmd, "-version"]) if java_cmd else (-1, "")
     code_javac, ver_javac = run_ver([javac_path, "-version"])
+
     logger.info(f"JAVA_HOME: {os.environ.get('JAVA_HOME') or '(未设置)'}")
     logger.info(f"java 路径: {java_cmd or '(未知)'}")
     logger.info(f"javac 路径: {javac_path}")
@@ -268,9 +603,11 @@ def ensure_jdk(cfg):
         logger.info(f"Java 版本: {ver_java}")
     if ver_javac:
         logger.info(f"Javac 版本: {ver_javac}")
+
     if code_javac != 0:
         logger.error("JDK 编译器不可用")
         return False
+
     return True
 
 # ==============================================================================

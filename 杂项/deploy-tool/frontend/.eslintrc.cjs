@@ -12,4 +12,12 @@ module.exports = {
   parserOptions: {
     ecmaVersion: "latest",
   },
+  overrides: [
+    {
+      files: ["postcss.config.js", "tailwind.config.cjs", "vite.config.ts"],
+      env: {
+        node: true,
+      },
+    },
+  ],
 };

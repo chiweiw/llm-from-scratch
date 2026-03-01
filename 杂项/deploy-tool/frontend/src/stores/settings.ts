@@ -1,23 +1,24 @@
-import { defineStore } from 'pinia';
-import { ref } from 'vue';
-import type { GlobalSettings, SystemDefaultConfig } from '../types';
+import { defineStore } from "pinia";
+import { ref } from "vue";
+import type { GlobalSettings, SystemDefaultConfig } from "../types";
 
-export const useSettingsStore = defineStore('settings', () => {
+export const useSettingsStore = defineStore("settings", () => {
   const globalSettings = ref<GlobalSettings>({
-    defaultTimeout: 600,
-    logRetentionDays: 30,
-    backupEnabled: true,
-    notifyOnComplete: true,
-    theme: 'system',
-    language: 'zh-Hans',
+    defaultTimeout: 0,
+    logRetentionDays: 0,
+    backupEnabled: false,
+    notifyOnComplete: false,
+    cloudDeploy: false,
+    theme: "",
+    language: "",
   });
 
   const systemDefaults = ref<SystemDefaultConfig>({
-    jdkPath: '',
-    mavenPath: '',
-    mavenSettingsPath: '',
-    mavenRepoPath: '',
-    mavenArgs: 'clean package -DskipTests',
+    jdkPath: "",
+    mavenPath: "",
+    mavenSettingsPath: "",
+    mavenRepoPath: "",
+    mavenArgs: [],
   });
 
   const loading = ref(false);
@@ -26,10 +27,10 @@ export const useSettingsStore = defineStore('settings', () => {
   async function fetchGlobalSettings() {
     loading.value = true;
     try {
-      const { GetGlobalSettings } = await import('../../wailsjs/go/main/App');
+      const { GetGlobalSettings } = await import("../../wailsjs/go/main/App");
       globalSettings.value = await GetGlobalSettings();
     } catch (error) {
-      console.error('Failed to fetch global settings:', error);
+      console.error("Failed to fetch global settings:", error);
     } finally {
       loading.value = false;
     }
@@ -38,10 +39,10 @@ export const useSettingsStore = defineStore('settings', () => {
   async function saveGlobalSettings() {
     saving.value = true;
     try {
-      const { SaveGlobalSettings } = await import('../../wailsjs/go/main/App');
+      const { SaveGlobalSettings } = await import("../../wailsjs/go/main/App");
       await SaveGlobalSettings(globalSettings.value);
     } catch (error) {
-      console.error('Failed to save global settings:', error);
+      console.error("Failed to save global settings:", error);
       throw error;
     } finally {
       saving.value = false;
@@ -51,10 +52,10 @@ export const useSettingsStore = defineStore('settings', () => {
   async function fetchSystemDefaults() {
     loading.value = true;
     try {
-      const { GetSystemDefaults } = await import('../../wailsjs/go/main/App');
+      const { GetSystemDefaults } = await import("../../wailsjs/go/main/App");
       systemDefaults.value = await GetSystemDefaults();
     } catch (error) {
-      console.error('Failed to fetch system defaults:', error);
+      console.error("Failed to fetch system defaults:", error);
     } finally {
       loading.value = false;
     }
@@ -63,10 +64,10 @@ export const useSettingsStore = defineStore('settings', () => {
   async function saveSystemDefaults() {
     saving.value = true;
     try {
-      const { SaveSystemDefaults } = await import('../../wailsjs/go/main/App');
+      const { SaveSystemDefaults } = await import("../../wailsjs/go/main/App");
       await SaveSystemDefaults(systemDefaults.value);
     } catch (error) {
-      console.error('Failed to save system defaults:', error);
+      console.error("Failed to save system defaults:", error);
       throw error;
     } finally {
       saving.value = false;

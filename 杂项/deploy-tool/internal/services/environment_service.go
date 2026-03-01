@@ -5,14 +5,14 @@ import (
 	"fmt"
 )
 
-func CheckEnvironment(env *models.Environment) *models.CheckResult {
+func CheckEnvironment(env *models.Environment, defaults *models.SystemDefaultConfig) *models.CheckResult {
 	result := &models.CheckResult{
 		Success: true,
 		Checks:  []models.CheckItem{},
 		Summary: "",
 	}
 
-	localChecks := CheckLocalConfig(env)
+	localChecks := CheckLocalConfig(env, defaults)
 	result.Checks = append(result.Checks, localChecks...)
 
 	targetChecks := CheckTargetFiles(env)

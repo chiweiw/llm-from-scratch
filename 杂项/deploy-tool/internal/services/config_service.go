@@ -30,10 +30,10 @@ func NewConfigService() *ConfigService {
 				Language:         "zh-Hans",
 			},
 			SystemDefaults: models.SystemDefaultConfig{
-				JdkPath:           `C:\Program Files\Java\jdk1.8.0_202\bin`,
-				MavenSettingsPath: `D:\java_tools\apache-maven-3.9.12\conf\settings_sgt0903.xml`,
-				MavenRepoPath:     `D:\m2\repository`,
-				MavenArgs:         "clean package -DskipTests",
+				JdkPath:           "",
+				MavenSettingsPath: "",
+				MavenRepoPath:     "",
+				MavenArgs:         []string{},
 			},
 			Environments: make([]models.Environment, 0),
 			History:      make([]models.DeployHistory, 0),
@@ -51,10 +51,54 @@ func (s *ConfigService) Load() {
 		return
 	}
 
-	if err := json.Unmarshal(data, &s.config); err != nil {
+	type rawConfig struct {
+		Settings       models.GlobalSettings      `json:"settings"`
+		SystemDefaults models.SystemDefaultConfig `json:"systemDefaults"`
+		Environments   []json.RawMessage          `json:"environments"`
+		History        []models.DeployHistory     `json:"history"`
+	}
+
+	var raw rawConfig
+	if err := json.Unmarshal(data, &raw); err != nil {
 		s.initDefaultEnvironments()
 		return
 	}
+
+	cfg := models.AppConfig{
+		Settings:       raw.Settings,
+		SystemDefaults: raw.SystemDefaults,
+		Environments:   make([]models.Environment, 0),
+		History:        raw.History,
+	}
+
+	type envCompat struct {
+		ProjectRoot string `json:"projectRoot"`
+		Local       *struct {
+			ProjectRoot string `json:"projectRoot"`
+		} `json:"local"`
+	}
+
+	for _, envRaw := range raw.Environments {
+		var env models.Environment
+		if err := json.Unmarshal(envRaw, &env); err != nil {
+			continue
+		}
+
+		var compat envCompat
+		_ = json.Unmarshal(envRaw, &compat)
+
+		if env.ProjectRoot == "" {
+			if compat.ProjectRoot != "" {
+				env.ProjectRoot = compat.ProjectRoot
+			} else if compat.Local != nil {
+				env.ProjectRoot = compat.Local.ProjectRoot
+			}
+		}
+
+		cfg.Environments = append(cfg.Environments, env)
+	}
+
+	s.config = cfg
 }
 
 func (s *ConfigService) initDefaultEnvironments() {
@@ -65,21 +109,10 @@ func (s *ConfigService) initDefaultEnvironments() {
 			Name:          "开发环境",
 			Identifier:    "dev",
 			Description:   "本地开发环境 - deploy_tool.py 配置",
+			ProjectRoot:   `D:\javaproject\backcode`,
 			CloudDeploy:   true,
 			Timeout:       600,
-			DryRun:        false,
 			BackupCleanup: true,
-			Local: models.LocalConfig{
-				ProjectRoot:       `D:\javaproject\backcode`,
-				JdkPath:           `C:\Program Files\Java\jdk1.8.0_202\bin`,
-				MavenSettingsPath: `D:\java_tools\apache-maven-3.9.12\conf\settings_sgt0903.xml`,
-				MavenRepoPath:     `D:\m2\repository`,
-				MavenArgs:         "clean package -DskipTests -s D:\\java_tools\\apache-maven-3.9.12\\conf\\settings_sgt0903.xml -Dmaven.repo.local=D:\\m2\\repository",
-				MavenQuiet:        true,
-				CompactMvnLog:     true,
-				SpecifyPom:        true,
-				OfflineBuild:      true,
-			},
 			Servers: []models.ServerConfig{
 				{
 					ID:            "server_dev_1",

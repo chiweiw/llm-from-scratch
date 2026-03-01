@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
-import { useEnvironmentStore } from '@/stores/environment';
-import { useDeployStore } from '@/stores/deploy';
+import { ref, onMounted, onUnmounted } from "vue";
+import { useEnvironmentStore } from "@/stores/environment";
+import { useDeployStore } from "@/stores/deploy";
 
 const envStore = useEnvironmentStore();
 const deployStore = useDeployStore();
 
-const selectedEnvId = ref('');
+const selectedEnvId = ref("");
 let progressInterval: number | null = null;
 
 onMounted(async () => {
@@ -39,12 +39,19 @@ function cancelDeploy() {
 <template>
   <div class="h-full p-6">
     <h1 class="text-2xl font-bold mb-6">部署中心</h1>
-    
+
     <div class="mb-6">
       <label class="text-sm text-muted-foreground mb-2 block">选择环境</label>
-      <select v-model="selectedEnvId" class="w-full max-w-md rounded-md border bg-background px-3 py-2">
+      <select
+        v-model="selectedEnvId"
+        class="w-full max-w-md rounded-md border bg-background px-3 py-2"
+      >
         <option value="">请选择环境</option>
-        <option v-for="env in envStore.environments" :key="env.id" :value="env.id">
+        <option
+          v-for="env in envStore.environments"
+          :key="env.id"
+          :value="env.id"
+        >
           {{ env.name }}
         </option>
       </select>
@@ -59,15 +66,19 @@ function cancelDeploy() {
             <span>{{ deployStore.progress.totalProgress }}%</span>
           </div>
           <div class="h-2 rounded-full bg-muted overflow-hidden">
-            <div 
+            <div
               class="h-full bg-primary transition-all duration-300"
               :style="{ width: `${deployStore.progress.totalProgress}%` }"
             ></div>
           </div>
         </div>
         <div class="space-y-3">
-          <div v-for="step in deployStore.progress.steps" :key="step.name" class="flex items-center gap-3">
-            <div 
+          <div
+            v-for="step in deployStore.progress.steps"
+            :key="step.name"
+            class="flex items-center gap-3"
+          >
+            <div
               class="w-6 h-6 rounded-full flex items-center justify-center text-xs"
               :class="{
                 'bg-muted text-muted-foreground': step.status === 'pending',
@@ -76,11 +87,19 @@ function cancelDeploy() {
                 'bg-red-500 text-white': step.status === 'failed',
               }"
             >
-              {{ step.status === 'success' ? '✓' : step.status === 'failed' ? '✗' : '' }}
+              {{
+                step.status === "success"
+                  ? "✓"
+                  : step.status === "failed"
+                  ? "✗"
+                  : ""
+              }}
             </div>
             <div class="flex-1">
               <div class="font-medium">{{ step.name }}</div>
-              <div v-if="step.message" class="text-sm text-muted-foreground">{{ step.message }}</div>
+              <div v-if="step.message" class="text-sm text-muted-foreground">
+                {{ step.message }}
+              </div>
             </div>
           </div>
         </div>
@@ -91,14 +110,14 @@ function cancelDeploy() {
     </div>
 
     <div class="flex gap-4">
-      <button 
+      <button
         @click="startDeploy"
         :disabled="!selectedEnvId || deployStore.isDeploying"
         class="rounded-md bg-primary px-6 py-2 text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         开始部署
       </button>
-      <button 
+      <button
         v-if="deployStore.isDeploying"
         @click="cancelDeploy"
         class="rounded-md border px-6 py-2 hover:bg-accent"

@@ -1,0 +1,33 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Wails Dev",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}",
+      "args": ["dev"],
+      "preLaunchTask": "",
+      "env": {},
+      "showLog": true
+    },
+    {
+      "name": "Attach to Wails",
+      "type": "go",
+      "request": "attach",
+      "mode": "auto",
+      "processId": "${command:pickProcess}"
+    },
+    {
+      "name": "Wails Build & Run",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}",
+      "args": [],
+      "preLaunchTask": "wails-build",
+      "env": {}
+    }
+  ]
+}

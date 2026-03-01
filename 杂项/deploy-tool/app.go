@@ -12,6 +12,7 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 	"github.com/wailsapp/wails/v2/pkg/options/linux"
 	"github.com/wailsapp/wails/v2/pkg/options/windows"
+	wailsRuntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 //go:embed all:frontend/dist
@@ -22,6 +23,10 @@ type App struct {
 	configService  *services.ConfigService
 	deployService  *services.DeployService
 	historyService *services.HistoryService
+}
+
+func (a *App) startup(ctx context.Context) {
+	a.ctx = ctx
 }
 
 func NewApp() *App {
@@ -65,7 +70,7 @@ func (a *App) CheckEnvironment(envID string) *models.CheckResult {
 	if env == nil {
 		return nil
 	}
-	return services.CheckEnvironment(env)
+	return services.CheckEnvironment(env, a.configService.GetSystemDefaults())
 }
 
 func (a *App) StartDeploy(envID string, jarIDs []string) error {
@@ -112,6 +117,25 @@ func (a *App) SaveSystemDefaults(defaults models.SystemDefaultConfig) error {
 	return err
 }
 
+type MavenParseResult = services.MavenParseResult
+
+func (a *App) ParseMavenCommand(cmdLine string) *MavenParseResult {
+	return services.ParseMavenCommand(cmdLine)
+}
+
+func (a *App) GetAutoDetectJDK() []map[string]string {
+	return services.AutoDetectJDK()
+}
+
+func (a *App) StartJDKDetection() {
+	go func() {
+		jdks := services.DetectJDK()
+		if a.ctx != nil {
+			wailsRuntime.EventsEmit(a.ctx, "jdk-detection-result", jdks)
+		}
+	}()
+}
+
 func (a *App) ExportConfig(envID string) (string, error) {
 	return a.configService.Export(envID)
 }
@@ -122,10 +146,6 @@ func (a *App) ImportConfig(jsonData string) error {
 		a.configService.Save()
 	}
 	return err
-}
-
-func (a *App) startup(ctx context.Context) {
-	a.ctx = ctx
 }
 
 func main() {

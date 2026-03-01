@@ -3,7 +3,7 @@ import { useI18n } from "vue-i18n";
 import { useRoute } from "vue-router";
 import { computed } from "vue";
 
-const { t, availableLocales: languages, locale } = useI18n();
+const { availableLocales: languages, locale } = useI18n();
 const route = useRoute();
 
 const currentTitle = computed(() => {
@@ -45,7 +45,7 @@ const navItems = [
           :class="[
             route.path === item.path
               ? 'bg-primary text-primary-foreground'
-              : 'hover:bg-accent hover:text-accent-foreground'
+              : 'hover:bg-accent hover:text-accent-foreground',
           ]"
         >
           <span>{{ item.icon }}</span>
@@ -62,29 +62,29 @@ const navItems = [
             :class="[
               item === locale
                 ? 'bg-primary text-primary-foreground'
-                : 'hover:bg-accent'
+                : 'hover:bg-accent',
             ]"
           >
-            {{ item === 'zh-Hans' ? '中文' : 'EN' }}
+            {{ item === "zh-Hans" ? "中文" : "EN" }}
           </button>
         </div>
       </div>
     </aside>
-    
+
     <main class="flex-1 flex flex-col overflow-hidden">
-      <header 
+      <header
         class="h-12 border-b flex items-center justify-between px-4 bg-card/50"
-        style="--wails-draggable:drag"
+        style="--wails-draggable: drag"
       >
         <span class="text-sm text-muted-foreground">{{ currentTitle }}</span>
-        <div class="flex gap-2" style="--wails-draggable:no-drag">
-          <button 
+        <div class="flex gap-2" style="--wails-draggable: no-drag">
+          <button
             @click="onclickMinimise"
             class="w-8 h-8 rounded hover:bg-accent flex items-center justify-center text-sm"
           >
             ─
           </button>
-          <button 
+          <button
             @click="onclickQuit"
             class="w-8 h-8 rounded hover:bg-destructive hover:text-destructive-foreground flex items-center justify-center text-sm"
           >
@@ -92,7 +92,7 @@ const navItems = [
           </button>
         </div>
       </header>
-      
+
       <div class="flex-1 overflow-auto">
         <router-view />
       </div>
@@ -105,7 +105,8 @@ const navItems = [
 @import url("./assets/css/font.css");
 @import url("./assets/css/globals.css");
 
-html, body {
+html,
+body {
   width: 100%;
   height: 100%;
   margin: 0;

@@ -1,39 +1,170 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { useSettingsStore } from '../stores/settings';
+import { ref, onMounted, onUnmounted } from "vue";
+import { useSettingsStore } from "../stores/settings";
+import { EventsOn, EventsOff } from "../../wailsjs/runtime/runtime";
 
 const settingsStore = useSettingsStore();
-const activeTab = ref('general');
+const activeTab = ref("general");
+const mavenCommandInput = ref("");
+const parsing = ref(false);
+const detectedJdks = ref<{ path: string; source: string }[]>([]);
+const detectingJdk = ref(false);
+const errorMsg = ref("");
+const successMsg = ref("");
 
 onMounted(async () => {
   await settingsStore.fetchAll();
+
+  EventsOn(
+    "jdk-detection-result",
+    (jdks: { path: string; source: string }[] | null) => {
+      const safeJdks = Array.isArray(jdks) ? jdks : [];
+      console.log("Received JDK detection result:", safeJdks);
+      detectingJdk.value = false;
+      detectedJdks.value = safeJdks;
+      if (safeJdks.length > 0) {
+        settingsStore.systemDefaults.jdkPath = safeJdks[0].path;
+        successMsg.value = "检测到 " + safeJdks.length + " 个 JDK";
+      } else {
+        errorMsg.value = "未检测到 JDK，请手动配置";
+      }
+    }
+  );
+
+  if (!settingsStore.systemDefaults.jdkPath) {
+    await detectJdk();
+  }
+});
+
+onUnmounted(() => {
+  EventsOff("jdk-detection-result");
 });
 
 async function saveSettings() {
   try {
     await settingsStore.saveAll();
   } catch (error) {
-    console.error('Save failed:', error);
+    console.error("Save failed:", error);
   }
 }
 
 function resetToDefaults() {
   settingsStore.globalSettings = {
-    defaultTimeout: 600,
-    logRetentionDays: 30,
-    backupEnabled: true,
-    notifyOnComplete: true,
-    cloudDeploy: true,
-    theme: 'system',
-    language: 'zh-Hans',
+    defaultTimeout: 0,
+    logRetentionDays: 0,
+    backupEnabled: false,
+    notifyOnComplete: false,
+    cloudDeploy: false,
+    theme: "",
+    language: "",
   };
   settingsStore.systemDefaults = {
-    jdkPath: '',
-    mavenPath: '',
-    mavenSettingsPath: '',
-    mavenRepoPath: '',
-    mavenArgs: 'clean package -DskipTests',
+    jdkPath: "",
+    mavenPath: "",
+    mavenSettingsPath: "",
+    mavenRepoPath: "",
+    mavenArgs: [],
   };
+}
+
+async function parseMavenCommand() {
+  errorMsg.value = "";
+  successMsg.value = "";
+  if (!mavenCommandInput.value.trim()) {
+    return;
+  }
+  parsing.value = true;
+  try {
+    const { ParseMavenCommand } = await import("../../wailsjs/go/main/App");
+    const result = await ParseMavenCommand(mavenCommandInput.value);
+    console.log("Parse result:", result);
+    console.log(
+      "[mvn-parse] mavenPath=%s settingsPath=%s repoLocal=%s",
+      result?.mavenPath,
+      result?.settingsPath,
+      result?.repoLocal
+    );
+    console.log("Before update:", JSON.stringify(settingsStore.systemDefaults));
+
+    if (result.mavenPath) {
+      settingsStore.systemDefaults.mavenPath = result.mavenPath.replace(
+        /"/g,
+        ""
+      );
+    }
+    if (result.settingsPath) {
+      settingsStore.systemDefaults.mavenSettingsPath =
+        result.settingsPath.replace(/"/g, "");
+    }
+    if (result.repoLocal) {
+      settingsStore.systemDefaults.mavenRepoPath = result.repoLocal.replace(
+        /"/g,
+        ""
+      );
+    }
+    if (!result.mavenPath) {
+      console.warn(
+        "[mvn-parse] 未识别 Maven 可执行文件路径；如果路径包含空格，建议加引号"
+      );
+    }
+    if (!result.repoLocal) {
+      console.warn("[mvn-parse] 未识别 -Dmaven.repo.local");
+    }
+    const settingsPath = result.settingsPath
+      ? result.settingsPath.replace(/"/g, "")
+      : "";
+    const repoLocal = result.repoLocal
+      ? result.repoLocal.replace(/"/g, "")
+      : "";
+    const params: string[] = ["clean", "package"];
+
+    const hasSkipTests =
+      (Array.isArray(result.argsArray) &&
+        result.argsArray.some(
+          (a: string) => a && a.startsWith("-DskipTests")
+        )) ||
+      typeof result.properties?.skipTests !== "undefined";
+    if (!hasSkipTests) {
+      params.push("-DskipTests");
+    }
+
+    if (settingsPath) {
+      params.push("-s", settingsPath);
+    }
+    if (repoLocal) {
+      params.push(`-Dmaven.repo.local=${repoLocal}`);
+    }
+
+    settingsStore.systemDefaults.mavenArgs = params;
+
+    console.log("After update:", JSON.stringify(settingsStore.systemDefaults));
+    successMsg.value = "解析成功！";
+  } catch (error: any) {
+    console.error("Parse failed:", error);
+    errorMsg.value = "解析失败: " + (error.message || error);
+  } finally {
+    parsing.value = false;
+  }
+}
+
+async function detectJdk() {
+  errorMsg.value = "";
+  successMsg.value = "";
+  detectingJdk.value = true;
+  detectedJdks.value = [];
+  try {
+    const { StartJDKDetection } = await import("../../wailsjs/go/main/App");
+    await StartJDKDetection();
+  } catch (error: any) {
+    console.error("Detect JDK failed:", error);
+    errorMsg.value = "检测失败: " + (error.message || error);
+    detectingJdk.value = false;
+  }
+}
+
+function selectJdk(jdk: { path: string; source: string }) {
+  settingsStore.systemDefaults.jdkPath = jdk.path;
+  detectedJdks.value = [];
 }
 </script>
 
@@ -46,18 +177,20 @@ function resetToDefaults() {
           <p class="text-gray-500">配置应用程序的全局设置和默认值</p>
         </div>
         <div class="flex gap-2">
-          <button 
+          <button
             class="rounded-md border px-3 py-2 text-sm hover:bg-gray-50"
             @click="resetToDefaults"
+            type="button"
           >
             重置
           </button>
-          <button 
+          <button
             class="rounded-md bg-primary px-4 py-2 text-sm text-white hover:bg-primary/90"
-            @click="saveSettings" 
+            @click="saveSettings"
             :disabled="settingsStore.saving"
+            type="button"
           >
-            {{ settingsStore.saving ? '保存中...' : '保存设置' }}
+            {{ settingsStore.saving ? "保存中..." : "保存设置" }}
           </button>
         </div>
       </div>
@@ -66,15 +199,25 @@ function resetToDefaults() {
         <nav class="-mb-px flex space-x-4">
           <button
             class="whitespace-nowrap border-b-2 px-1 py-4 text-sm font-medium"
-            :class="activeTab === 'general' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
-            @click="activeTab = 'general'"
+            :class="
+              activeTab === 'general'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            "
+            @click.prevent="activeTab = 'general'"
+            type="button"
           >
             通用设置
           </button>
           <button
             class="whitespace-nowrap border-b-2 px-1 py-4 text-sm font-medium"
-            :class="activeTab === 'defaults' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
-            @click="activeTab = 'defaults'"
+            :class="
+              activeTab === 'defaults'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            "
+            @click.prevent="activeTab = 'defaults'"
+            type="button"
           >
             默认配置
           </button>
@@ -88,9 +231,11 @@ function resetToDefaults() {
           <div class="space-y-4">
             <div class="grid grid-cols-2 gap-4">
               <div>
-                <label class="block text-sm font-medium">部署超时时间 (秒)</label>
-                <input 
-                  v-model.number="settingsStore.globalSettings.defaultTimeout" 
+                <label class="block text-sm font-medium"
+                  >部署超时时间 (秒)</label
+                >
+                <input
+                  v-model.number="settingsStore.globalSettings.defaultTimeout"
                   type="number"
                   class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
                   placeholder="600"
@@ -98,8 +243,8 @@ function resetToDefaults() {
               </div>
               <div>
                 <label class="block text-sm font-medium">日志保留天数</label>
-                <input 
-                  v-model.number="settingsStore.globalSettings.logRetentionDays" 
+                <input
+                  v-model.number="settingsStore.globalSettings.logRetentionDays"
                   type="number"
                   class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
                   placeholder="30"
@@ -107,15 +252,27 @@ function resetToDefaults() {
               </div>
             </div>
             <label class="flex items-center gap-2">
-              <input type="checkbox" v-model="settingsStore.globalSettings.backupEnabled" class="rounded" />
+              <input
+                type="checkbox"
+                v-model="settingsStore.globalSettings.backupEnabled"
+                class="rounded"
+              />
               <span class="text-sm">部署前自动备份</span>
             </label>
             <label class="flex items-center gap-2">
-              <input type="checkbox" v-model="settingsStore.globalSettings.cloudDeploy" class="rounded" />
+              <input
+                type="checkbox"
+                v-model="settingsStore.globalSettings.cloudDeploy"
+                class="rounded"
+              />
               <span class="text-sm">云端部署（默认）</span>
             </label>
             <label class="flex items-center gap-2">
-              <input type="checkbox" v-model="settingsStore.globalSettings.notifyOnComplete" class="rounded" />
+              <input
+                type="checkbox"
+                v-model="settingsStore.globalSettings.notifyOnComplete"
+                class="rounded"
+              />
               <span class="text-sm">部署完成后发送通知</span>
             </label>
           </div>
@@ -128,8 +285,8 @@ function resetToDefaults() {
             <div class="grid grid-cols-2 gap-4">
               <div>
                 <label class="block text-sm font-medium">主题</label>
-                <select 
-                  v-model="settingsStore.globalSettings.theme" 
+                <select
+                  v-model="settingsStore.globalSettings.theme"
                   class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
                 >
                   <option value="light">浅色</option>
@@ -139,8 +296,8 @@ function resetToDefaults() {
               </div>
               <div>
                 <label class="block text-sm font-medium">语言</label>
-                <select 
-                  v-model="settingsStore.globalSettings.language" 
+                <select
+                  v-model="settingsStore.globalSettings.language"
                   class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
                 >
                   <option value="zh-Hans">简体中文</option>
@@ -155,53 +312,141 @@ function resetToDefaults() {
 
       <div v-show="activeTab === 'defaults'" class="space-y-4">
         <div class="rounded-md border p-4">
+          <h3 class="text-lg font-medium">Maven 命令解析</h3>
+          <p class="mb-4 text-sm text-gray-500">
+            从 IDEA 的 Maven 工具窗口复制命令粘贴到下方解析
+          </p>
+          <div class="space-y-3">
+            <div>
+              <textarea
+                v-model="mavenCommandInput"
+                class="w-full rounded-md border border-gray-300 px-3 py-2 font-mono text-sm"
+                rows="3"
+                placeholder='例如: "D:\Program Files\JetBrains\...\mvn.cmd" -Didea.version=2025.3.3 -s "D:\java_tools\apache-maven-3.9.12\conf\settings_sgt0903.xml" -Dmaven.repo.local=D:\m2\repository package -f pom.xml'
+              ></textarea>
+            </div>
+            <div class="flex items-center gap-2">
+              <button
+                class="rounded-md bg-blue-500 px-4 py-2 text-sm text-white hover:bg-blue-600 disabled:opacity-50"
+                @click="parseMavenCommand"
+                :disabled="parsing || !mavenCommandInput.trim()"
+                type="button"
+              >
+                {{ parsing ? "解析中..." : "解析命令" }}
+              </button>
+              <span v-if="successMsg" class="text-sm text-green-600">{{
+                successMsg
+              }}</span>
+              <span v-if="errorMsg" class="text-sm text-red-600">{{
+                errorMsg
+              }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="rounded-md border p-4">
           <h3 class="text-lg font-medium">系统默认配置</h3>
           <p class="mb-4 text-sm text-gray-500">新环境创建时的默认配置值</p>
           <div class="rounded-md bg-yellow-50 p-4 text-sm text-yellow-800 mb-4">
-            <strong>提示：</strong>这些配置将作为新创建环境的默认值，但可以单独为每个环境覆盖。
+            <strong>提示：</strong>
+            这些配置将作为新创建环境的默认值，但可以单独为每个环境覆盖。
           </div>
           <div class="space-y-4">
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm font-medium">默认 JDK 路径</label>
-                <input 
-                  v-model="settingsStore.systemDefaults.jdkPath" 
-                  class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
-                  placeholder="C:\Program Files\Java\jdk1.8.0_202\bin"
+            <div>
+              <label class="block text-sm font-medium">默认 JDK 路径</label>
+              <div class="flex gap-2 mt-1">
+                <input
+                  v-model="settingsStore.systemDefaults.jdkPath"
+                  class="flex-1 rounded-md border border-gray-300 px-3 py-2"
+                  placeholder="C:\Program Files\Java\jdk1.8.0_202"
                 />
+                <button
+                  class="rounded-md bg-green-500 px-4 py-2 text-sm text-white hover:bg-green-600 disabled:opacity-50"
+                  @click="detectJdk"
+                  :disabled="detectingJdk"
+                  type="button"
+                >
+                  {{ detectingJdk ? "检测中..." : "自动检测" }}
+                </button>
               </div>
-              <div>
-                <label class="block text-sm font-medium">默认 Maven 路径</label>
-                <input 
-                  v-model="settingsStore.systemDefaults.mavenPath" 
-                  class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
-                  placeholder="D:\maven\bin\mvn.cmd"
-                />
+              <div v-if="detectedJdks.length > 0" class="mt-2 space-y-1">
+                <p class="text-xs text-gray-500">检测到以下 JDK：</p>
+                <div
+                  v-for="jdk in detectedJdks"
+                  :key="jdk.path"
+                  class="cursor-pointer rounded bg-gray-100 px-2 py-1 text-xs hover:bg-gray-200"
+                  @click="selectJdk(jdk)"
+                >
+                  {{ jdk.path }} ({{ jdk.source }})
+                </div>
+              </div>
+              <div
+                v-if="successMsg && detectedJdks.length > 0"
+                class="mt-2 text-sm text-green-600"
+              >
+                {{ successMsg }}
+              </div>
+              <div v-if="errorMsg" class="mt-2 text-sm text-red-600">
+                {{ errorMsg }}
               </div>
             </div>
             <div>
-              <label class="block text-sm font-medium">默认 Maven settings.xml</label>
-              <input 
-                v-model="settingsStore.systemDefaults.mavenSettingsPath" 
+              <label class="block text-sm font-medium">默认 Maven 路径</label>
+              <input
+                v-model="settingsStore.systemDefaults.mavenPath"
+                class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                placeholder="从上方“解析命令”自动回填"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium"
+                >默认 Maven settings.xml</label
+              >
+              <input
+                v-model="settingsStore.systemDefaults.mavenSettingsPath"
                 class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
                 placeholder="D:\maven\conf\settings.xml"
               />
             </div>
             <div>
               <label class="block text-sm font-medium">默认本地仓库路径</label>
-              <input 
-                v-model="settingsStore.systemDefaults.mavenRepoPath" 
+              <input
+                v-model="settingsStore.systemDefaults.mavenRepoPath"
                 class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
                 placeholder="D:\m2\repository"
               />
             </div>
             <div>
               <label class="block text-sm font-medium">默认 Maven 参数</label>
-              <input 
-                v-model="settingsStore.systemDefaults.mavenArgs" 
-                class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
-                placeholder="clean package -DskipTests"
-              />
+              <div class="mt-1 space-y-2">
+                <div
+                  v-for="(_, idx) in settingsStore.systemDefaults.mavenArgs"
+                  :key="idx"
+                  class="flex gap-2"
+                >
+                  <input
+                    v-model="settingsStore.systemDefaults.mavenArgs[idx]"
+                    class="flex-1 rounded-md border border-gray-300 px-3 py-2 font-mono text-sm"
+                    placeholder="参数项"
+                  />
+                  <button
+                    class="rounded-md border px-3 py-2 text-sm hover:bg-gray-50"
+                    @click="
+                      settingsStore.systemDefaults.mavenArgs.splice(idx, 1)
+                    "
+                    type="button"
+                  >
+                    删除
+                  </button>
+                </div>
+                <button
+                  class="rounded-md border px-3 py-2 text-sm hover:bg-gray-50"
+                  @click="settingsStore.systemDefaults.mavenArgs.push('')"
+                  type="button"
+                >
+                  添加参数
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -6,12 +6,14 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 )
 
-func CheckLocalConfig(env *models.Environment) []models.CheckItem {
+func CheckLocalConfig(env *models.Environment, defaults *models.SystemDefaultConfig) []models.CheckItem {
 	checks := []models.CheckItem{}
 
-	if env.Local.ProjectRoot == "" {
+	projectRoot := strings.TrimSpace(env.ProjectRoot)
+	if projectRoot == "" {
 		checks = append(checks, models.CheckItem{
 			Name:    "项目根目录",
 			Status:  models.CheckStatusFail,
@@ -20,12 +22,12 @@ func CheckLocalConfig(env *models.Environment) []models.CheckItem {
 		return checks
 	}
 
-	exists := checkPathExists(env.Local.ProjectRoot)
+	exists := checkPathExists(projectRoot)
 	if !exists {
 		checks = append(checks, models.CheckItem{
 			Name:    "项目根目录",
 			Status:  models.CheckStatusFail,
-			Message: "项目根目录不存在: " + env.Local.ProjectRoot,
+			Message: "项目根目录不存在: " + projectRoot,
 		})
 		return checks
 	}
@@ -33,10 +35,10 @@ func CheckLocalConfig(env *models.Environment) []models.CheckItem {
 	checks = append(checks, models.CheckItem{
 		Name:    "项目根目录",
 		Status:  models.CheckStatusPass,
-		Message: env.Local.ProjectRoot,
+		Message: projectRoot,
 	})
 
-	pomPath := filepath.Join(env.Local.ProjectRoot, "pom.xml")
+	pomPath := filepath.Join(projectRoot, "pom.xml")
 	if !checkPathExists(pomPath) {
 		checks = append(checks, models.CheckItem{
 			Name:    "pom.xml 文件",
@@ -45,38 +47,47 @@ func CheckLocalConfig(env *models.Environment) []models.CheckItem {
 		})
 	}
 
-	if env.Local.JdkPath == "" {
+	jdkPath := ""
+	mavenPath := ""
+	mavenSettingsPath := ""
+	if defaults != nil {
+		jdkPath = strings.TrimSpace(defaults.JdkPath)
+		mavenPath = strings.TrimSpace(defaults.MavenPath)
+		mavenSettingsPath = strings.TrimSpace(defaults.MavenSettingsPath)
+	}
+
+	if jdkPath == "" {
 		checks = append(checks, models.CheckItem{
 			Name:    "JDK 路径",
 			Status:  models.CheckStatusWarning,
 			Message: "未配置 JDK 路径（建议配置以避免问题）",
 		})
-	} else if !checkPathExists(env.Local.JdkPath) {
+	} else if !checkPathExists(jdkPath) {
 		checks = append(checks, models.CheckItem{
 			Name:    "JDK 路径",
 			Status:  models.CheckStatusWarning,
-			Message: "JDK 路径不存在: " + env.Local.JdkPath,
+			Message: "JDK 路径不存在: " + jdkPath,
 		})
 	} else {
 		checks = append(checks, models.CheckItem{
 			Name:    "JDK 路径",
 			Status:  models.CheckStatusPass,
-			Message: env.Local.JdkPath,
+			Message: jdkPath,
 		})
 	}
 
-	if env.Local.MavenPath != "" {
-		if !checkPathExists(env.Local.MavenPath) {
+	if mavenPath != "" {
+		if !checkPathExists(mavenPath) {
 			checks = append(checks, models.CheckItem{
 				Name:    "Maven 路径",
 				Status:  models.CheckStatusWarning,
-				Message: "Maven 路径不存在: " + env.Local.MavenPath,
+				Message: "Maven 路径不存在: " + mavenPath,
 			})
 		} else {
 			checks = append(checks, models.CheckItem{
 				Name:    "Maven 路径",
 				Status:  models.CheckStatusPass,
-				Message: env.Local.MavenPath,
+				Message: mavenPath,
 			})
 		}
 	} else {
@@ -96,18 +107,18 @@ func CheckLocalConfig(env *models.Environment) []models.CheckItem {
 		}
 	}
 
-	if env.Local.MavenSettingsPath != "" {
-		if !checkPathExists(env.Local.MavenSettingsPath) {
+	if mavenSettingsPath != "" {
+		if !checkPathExists(mavenSettingsPath) {
 			checks = append(checks, models.CheckItem{
 				Name:    "Maven settings.xml",
 				Status:  models.CheckStatusWarning,
-				Message: "Maven settings.xml 不存在: " + env.Local.MavenSettingsPath,
+				Message: "Maven settings.xml 不存在: " + mavenSettingsPath,
 			})
 		} else {
 			checks = append(checks, models.CheckItem{
 				Name:    "Maven settings.xml",
 				Status:  models.CheckStatusPass,
-				Message: env.Local.MavenSettingsPath,
+				Message: mavenSettingsPath,
 			})
 		}
 	}
@@ -131,6 +142,10 @@ func findMavenInPath() string {
 
 func CheckTargetFiles(env *models.Environment) []models.CheckItem {
 	checks := []models.CheckItem{}
+	projectRoot := strings.TrimSpace(env.ProjectRoot)
+	if projectRoot == "" {
+		return checks
+	}
 
 	if len(env.TargetFiles) == 0 {
 		checks = append(checks, models.CheckItem{
@@ -151,7 +166,7 @@ func CheckTargetFiles(env *models.Environment) []models.CheckItem {
 		if file.LocalPath == "" {
 			continue
 		}
-		fullPath := filepath.Join(env.Local.ProjectRoot, file.LocalPath)
+		fullPath := filepath.Join(projectRoot, file.LocalPath)
 		exists := checkPathExists(fullPath)
 		if exists {
 			checks = append(checks, models.CheckItem{
