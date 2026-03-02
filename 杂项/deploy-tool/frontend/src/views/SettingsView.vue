@@ -75,9 +75,13 @@ async function parseMavenCommand() {
   }
   parsing.value = true;
   try {
-    const { ParseMavenCommand } = await import("../../wailsjs/go/main/App");
-    const result = await ParseMavenCommand(mavenCommandInput.value);
-    console.log("Parse result:", result);
+    const { ParseMavenCommand } = await import("../../wailsjs/go/app/App");
+    const resp = await ParseMavenCommand({ command: mavenCommandInput.value });
+    const result = resp.code === 0 ? resp.data : null;
+    console.log("Parse response:", resp);
+    if (!result) {
+      throw new Error(resp.message || "解析失败");
+    }
     console.log(
       "[mvn-parse] mavenPath=%s settingsPath=%s repoLocal=%s",
       result?.mavenPath,
@@ -153,8 +157,11 @@ async function detectJdk() {
   detectingJdk.value = true;
   detectedJdks.value = [];
   try {
-    const { StartJDKDetection } = await import("../../wailsjs/go/main/App");
-    await StartJDKDetection();
+    const { StartJDKDetection } = await import("../../wailsjs/go/app/App");
+    const resp = await StartJDKDetection();
+    if (resp.code !== 0) {
+      throw new Error(resp.message || "检测失败");
+    }
   } catch (error: any) {
     console.error("Detect JDK failed:", error);
     errorMsg.value = "检测失败: " + (error.message || error);

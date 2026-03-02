@@ -27,8 +27,11 @@ export const useSettingsStore = defineStore("settings", () => {
   async function fetchGlobalSettings() {
     loading.value = true;
     try {
-      const { GetGlobalSettings } = await import("../../wailsjs/go/main/App");
-      globalSettings.value = await GetGlobalSettings();
+      const { GetGlobalSettings } = await import("../../wailsjs/go/app/App");
+      const resp = await GetGlobalSettings();
+      if (resp.code === 0) {
+        globalSettings.value = resp.data;
+      }
     } catch (error) {
       console.error("Failed to fetch global settings:", error);
     } finally {
@@ -39,8 +42,11 @@ export const useSettingsStore = defineStore("settings", () => {
   async function saveGlobalSettings() {
     saving.value = true;
     try {
-      const { SaveGlobalSettings } = await import("../../wailsjs/go/main/App");
-      await SaveGlobalSettings(globalSettings.value);
+      const { SaveGlobalSettings } = await import("../../wailsjs/go/app/App");
+      const resp = await SaveGlobalSettings({ settings: globalSettings.value });
+      if (resp.code !== 0) {
+        throw new Error(resp.message || "保存失败");
+      }
     } catch (error) {
       console.error("Failed to save global settings:", error);
       throw error;
@@ -52,8 +58,11 @@ export const useSettingsStore = defineStore("settings", () => {
   async function fetchSystemDefaults() {
     loading.value = true;
     try {
-      const { GetSystemDefaults } = await import("../../wailsjs/go/main/App");
-      systemDefaults.value = await GetSystemDefaults();
+      const { GetSystemDefaults } = await import("../../wailsjs/go/app/App");
+      const resp = await GetSystemDefaults();
+      if (resp.code === 0) {
+        systemDefaults.value = resp.data;
+      }
     } catch (error) {
       console.error("Failed to fetch system defaults:", error);
     } finally {
@@ -64,8 +73,11 @@ export const useSettingsStore = defineStore("settings", () => {
   async function saveSystemDefaults() {
     saving.value = true;
     try {
-      const { SaveSystemDefaults } = await import("../../wailsjs/go/main/App");
-      await SaveSystemDefaults(systemDefaults.value);
+      const { SaveSystemDefaults } = await import("../../wailsjs/go/app/App");
+      const resp = await SaveSystemDefaults({ defaults: systemDefaults.value });
+      if (resp.code !== 0) {
+        throw new Error(resp.message || "保存失败");
+      }
     } catch (error) {
       console.error("Failed to save system defaults:", error);
       throw error;

@@ -11,5 +11,8 @@
   "author": {
     "name": "chiww",
     "email": "chiweiw@foxmail.com"
+  },
+  "build": {
+    "dir": "./cmd/app"
   }
 }

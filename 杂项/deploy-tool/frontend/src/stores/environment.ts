@@ -17,8 +17,9 @@ export const useEnvironmentStore = defineStore("environment", () => {
   async function fetchEnvironments() {
     loading.value = true;
     try {
-      const { GetEnvironments } = await import("../../wailsjs/go/main/App");
-      environments.value = await GetEnvironments();
+      const { GetEnvironments } = await import("../../wailsjs/go/app/App");
+      const resp = await GetEnvironments();
+      environments.value = resp.code === 0 ? resp.data : [];
     } catch (error) {
       console.error("Failed to fetch environments:", error);
     } finally {
@@ -28,8 +29,9 @@ export const useEnvironmentStore = defineStore("environment", () => {
 
   async function fetchEnvironment(id: string) {
     try {
-      const { GetEnvironment } = await import("../../wailsjs/go/main/App");
-      currentEnvironment.value = await GetEnvironment(id);
+      const { GetEnvironment } = await import("../../wailsjs/go/app/App");
+      const resp = await GetEnvironment(id);
+      currentEnvironment.value = resp.code === 0 ? resp.data : null;
     } catch (error) {
       console.error("Failed to fetch environment:", error);
     }
@@ -38,8 +40,11 @@ export const useEnvironmentStore = defineStore("environment", () => {
   async function saveEnvironment(env: Environment) {
     saving.value = true;
     try {
-      const { SaveEnvironment } = await import("../../wailsjs/go/main/App");
-      await SaveEnvironment(env as any);
+      const { SaveEnvironment } = await import("../../wailsjs/go/app/App");
+      const resp = await SaveEnvironment({ environment: env });
+      if (resp.code !== 0) {
+        throw new Error(resp.message || "保存失败");
+      }
       await fetchEnvironments();
     } catch (error) {
       console.error("Failed to save environment:", error);
@@ -51,8 +56,11 @@ export const useEnvironmentStore = defineStore("environment", () => {
 
   async function deleteEnvironment(id: string) {
     try {
-      const { DeleteEnvironment } = await import("../../wailsjs/go/main/App");
-      await DeleteEnvironment(id);
+      const { DeleteEnvironment } = await import("../../wailsjs/go/app/App");
+      const resp = await DeleteEnvironment({ id });
+      if (resp.code !== 0) {
+        throw new Error(resp.message || "删除失败");
+      }
       if (currentEnvironment.value?.id === id) {
         currentEnvironment.value = null;
       }
@@ -65,8 +73,12 @@ export const useEnvironmentStore = defineStore("environment", () => {
 
   async function checkEnvironment(id: string) {
     try {
-      const { CheckEnvironment } = await import("../../wailsjs/go/main/App");
-      const result = await CheckEnvironment(id);
+      const { CheckEnvironment } = await import("../../wailsjs/go/app/App");
+      const resp = await CheckEnvironment({ id });
+      if (resp.code !== 0 || !resp.data) {
+        throw new Error(resp.message || "自检失败");
+      }
+      const result = resp.data;
       checkResult.value = result;
 
       const envIndex = environments.value.findIndex((e) => e.id === id);

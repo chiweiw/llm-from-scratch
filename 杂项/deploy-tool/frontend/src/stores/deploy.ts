@@ -22,19 +22,27 @@ export const useDeployStore = defineStore("deploy", {
 
     async startDeploy(envId: string) {
       this.isDeploying = true;
-      const { StartDeploy } = await import("../../wailsjs/go/main/App");
-      await StartDeploy(envId, this.selectedJarIds);
+      const { StartDeploy } = await import("../../wailsjs/go/app/App");
+      const resp = await StartDeploy({
+        environmentId: envId,
+        jarIds: this.selectedJarIds,
+      });
+      if (resp.code !== 0) {
+        this.isDeploying = false;
+        throw new Error(resp.message || "启动部署失败");
+      }
     },
 
     async cancelDeploy() {
-      const { CancelDeploy } = await import("../../wailsjs/go/main/App");
+      const { CancelDeploy } = await import("../../wailsjs/go/app/App");
       await CancelDeploy();
       this.isDeploying = false;
     },
 
     async fetchProgress() {
-      const { GetDeployProgress } = await import("../../wailsjs/go/main/App");
-      this.progress = await GetDeployProgress();
+      const { GetDeployProgress } = await import("../../wailsjs/go/app/App");
+      const resp = await GetDeployProgress();
+      this.progress = resp.code === 0 ? resp.data : null;
       if (
         this.progress &&
         ["success", "failed", "canceled"].includes(this.progress.status)
