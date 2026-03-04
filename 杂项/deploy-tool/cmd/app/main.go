@@ -2,8 +2,8 @@ package appcmd
 
 import (
 	"deploy-tool/internal/app"
-	"deploy-tool/internal/config"
-	"deploy-tool/internal/dao"
+	"deploy-tool/internal/db"
+	"deploy-tool/internal/logger"
 	"deploy-tool/internal/service"
 	"io/fs"
 	"os"
@@ -18,16 +18,42 @@ import (
 )
 
 func Run(assets fs.FS) error {
-	appCfg := config.Default()
-	configDAO := dao.NewFileConfigDAO(appCfg)
+	logger.Init(0)
 
-	configService := service.NewConfigService(configDAO)
+	database, err := db.Init("")
+	if err != nil {
+		logger.Error("初始化数据库失败: %v", err)
+		return err
+	}
+	defer database.Close()
+
+	envDAO := db.NewEnvironmentDAO(database)
+	globalSettingDAO := db.NewGlobalSettingDAO(database)
+	systemDefaultDAO := db.NewSystemDefaultDAO(database)
+	serverConfigDAO := db.NewServerConfigDAO(database)
+	targetFileDAO := db.NewTargetFileDAO(database)
+	deployHistoryDAO := db.NewDeployHistoryDAO(database)
+	deployLogDAO := db.NewDeployLogDAO(database)
+
+	configService := service.NewConfigService(
+		envDAO,
+		globalSettingDAO,
+		systemDefaultDAO,
+		serverConfigDAO,
+		targetFileDAO,
+	)
 	configService.Load()
+
+	historyService := service.NewHistoryService(deployHistoryDAO, deployLogDAO)
+
+	deployService := service.NewDeployService()
+	deployService.SetConfigService(configService)
+	deployService.SetHistoryService(historyService)
 
 	ipc := app.New(
 		configService,
-		service.NewDeployService(),
-		service.NewHistoryService(),
+		deployService,
+		historyService,
 	)
 
 	webviewUserDataPath := filepath.Join(os.Getenv("LOCALAPPDATA"), "deploy-tool", "webview2")
@@ -37,7 +63,7 @@ func Run(assets fs.FS) error {
 	disableGPU := strings.TrimSpace(strings.ToLower(os.Getenv("DEPLOY_TOOL_WEBVIEW2_DISABLE_GPU"))) == "1"
 	disableRCI := strings.TrimSpace(strings.ToLower(os.Getenv("DEPLOY_TOOL_WEBVIEW2_DISABLE_RCI"))) == "1"
 
-	err := wails.Run(&options.App{
+	err = wails.Run(&options.App{
 		Title:  "简易发包工具",
 		Width:  1280,
 		Height: 800,

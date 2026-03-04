@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"deploy-tool/internal/logger"
 	"deploy-tool/internal/model/entity"
 	"deploy-tool/internal/model/request"
 	"deploy-tool/internal/model/response"
@@ -25,8 +26,21 @@ func New(cfg *service.ConfigService, deploy *service.DeployService, history *ser
 	}
 }
 
+func (a *App) SetDeployService(deploy *service.DeployService) {
+	a.deployService = deploy
+}
+
 func (a *App) Startup(ctx context.Context) {
 	a.ctx = ctx
+
+	logger.SetEventEmitter(func(level string, message string) {
+		if a.ctx != nil {
+			wailsRuntime.EventsEmit(a.ctx, "log-event", map[string]string{
+				"level":   level,
+				"message": message,
+			})
+		}
+	})
 }
 
 func (a *App) GetEnvironments() response.Data[[]entity.Environment] {
@@ -97,7 +111,11 @@ func (a *App) GetDeployProgress() response.Data[*entity.DeployProgress] {
 }
 
 func (a *App) GetDeployHistory() response.Data[[]entity.DeployHistory] {
-	return response.OKData(a.history.GetList())
+	histories, err := a.history.GetAll(100)
+	if err != nil {
+		return response.FailData(err.Error(), []entity.DeployHistory{})
+	}
+	return response.OKData(histories)
 }
 
 func (a *App) GetGlobalSettings() response.Data[entity.GlobalSettings] {
@@ -160,4 +178,3 @@ func (a *App) ImportConfig(req request.ImportEnvironment) response.Base {
 	}
 	return response.OK()
 }
-

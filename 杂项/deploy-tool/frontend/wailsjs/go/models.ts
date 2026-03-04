@@ -791,6 +791,18 @@ export namespace response {
 
 export namespace service {
 	
+	export class DeployService {
+	
+	
+	    static createFrom(source: any = {}) {
+	        return new DeployService(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	
+	    }
+	}
 	export class MavenParseResult {
 	    mavenPath: string;
 	    settingsPath: string;

@@ -9,17 +9,15 @@
     "language": ""
   },
   "systemDefaults": {
-    "jdkPath": "",
-    "mavenPath": "D:\\Program Files\\JetBrains\\IntelliJ IDEA 2025.3.3\\plugins\\maven\\lib\\maven3\\bin\\mvn.cmd",
+    "jdkPath": "C:\\Program Files\\Java\\jdk1.8.0_261",
+    "mavenPath": "E:\\javaTools\\apache-maven-3.8.1\\bin\\mvn.cmd",
     "mavenSettingsPath": "D:\\java_tools\\apache-maven-3.9.12\\conf\\settings_sgt0903.xml",
-    "mavenRepoPath": "D:\\m2\\repository",
+    "mavenRepoPath": "D:\\soft\\maven_repository",
     "mavenArgs": [
       "clean",
       "package",
       "-DskipTests",
-      "-s",
-      "D:\\java_tools\\apache-maven-3.9.12\\conf\\settings_sgt0903.xml",
-      "-Dmaven.repo.local=D:\\m2\\repository"
+      "-Dmaven.repo.local=D:\\soft\\maven_repository"
     ]
   },
   "environments": [
@@ -28,7 +26,7 @@
       "name": "开发环境",
       "identifier": "dev",
       "description": "本地开发环境 - deploy_tool.py 配置",
-      "projectRoot": "D:\\javaproject\\backcode",
+      "projectRoot": "E:\\javaProject\\shanguotou-back",
       "cloudDeploy": true,
       "timeout": 600,
       "backupCleanup": false,
@@ -68,7 +66,7 @@
       ],
       "checkStatus": "unchecked",
       "createdAt": 1772360754,
-      "updatedAt": 1772360754
+      "updatedAt": 1772616096
     }
   ],
   "history": []

@@ -417,7 +417,7 @@ async function checkCurrentEnvironment() {
                 v-model="editingEnv.backupCleanup"
               />
               <div
-                class="h-6 w-11 rounded-full bg-gray-200 peer-checked:bg-primary after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-5"
+                class="h-6 w-11 rounded-full bg-gray-200 peer-checked:bg-blue-500 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-5"
               ></div>
             </label>
           </div>
@@ -517,22 +517,46 @@ async function checkCurrentEnvironment() {
                     placeholder="/home/omp/jar/restart.sh"
                   />
                 </div>
-                <label class="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    v-model="server.enableRestart"
-                    class="rounded"
-                  />
-                  <span class="text-sm">启用重启</span>
-                </label>
-                <label class="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    v-model="server.useSudo"
-                    class="rounded"
-                  />
-                  <span class="text-sm">使用 Sudo</span>
-                </label>
+                <div
+                  class="flex items-center justify-between rounded-md border border-gray-200 p-3"
+                >
+                  <div>
+                    <div class="text-sm font-medium">启用重启</div>
+                    <div class="text-xs text-gray-500">
+                      部署后自动执行重启脚本
+                    </div>
+                  </div>
+                  <label class="relative inline-flex cursor-pointer items-center">
+                    <input
+                      type="checkbox"
+                      class="peer sr-only"
+                      v-model="server.enableRestart"
+                    />
+                    <div
+                      class="h-6 w-11 rounded-full bg-gray-200 peer-checked:bg-blue-500 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-5"
+                    ></div>
+                  </label>
+                </div>
+                <div
+                  class="flex items-center justify-between rounded-md border border-gray-200 p-3"
+                >
+                  <div>
+                    <div class="text-sm font-medium">使用 Sudo</div>
+                    <div class="text-xs text-gray-500">
+                      使用 sudo 权限执行命令
+                    </div>
+                  </div>
+                  <label class="relative inline-flex cursor-pointer items-center">
+                    <input
+                      type="checkbox"
+                      class="peer sr-only"
+                      v-model="server.useSudo"
+                    />
+                    <div
+                      class="h-6 w-11 rounded-full bg-gray-200 peer-checked:bg-blue-500 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-5"
+                    ></div>
+                  </label>
+                </div>
               </div>
             </div>
           </div>
