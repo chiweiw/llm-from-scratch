@@ -7,6 +7,7 @@ import (
 	"deploy-tool/internal/model/request"
 	"deploy-tool/internal/model/response"
 	"deploy-tool/internal/service"
+	"deploy-tool/internal/utils"
 
 	wailsRuntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -33,11 +34,13 @@ func (a *App) SetDeployService(deploy *service.DeployService) {
 func (a *App) Startup(ctx context.Context) {
 	a.ctx = ctx
 
-	logger.SetEventEmitter(func(level string, message string) {
+	logger.SetEventEmitter(func(level string, message string, ts string, line string) {
 		if a.ctx != nil {
 			wailsRuntime.EventsEmit(a.ctx, "log-event", map[string]string{
 				"level":   level,
 				"message": message,
+				"ts":      ts,
+				"line":    line,
 			})
 		}
 	})
@@ -145,12 +148,12 @@ func (a *App) ParseMavenCommand(req request.ParseMavenCommand) response.Data[*se
 }
 
 func (a *App) GetAutoDetectJDK() response.Data[[]map[string]string] {
-	return response.OKData(service.AutoDetectJDK())
+	return response.OKData(utils.AutoDetectJDK())
 }
 
 func (a *App) StartJDKDetection() response.Base {
 	go func() {
-		jdks := service.DetectJDK()
+		jdks := utils.DetectJDK()
 		if a.ctx != nil {
 			wailsRuntime.EventsEmit(a.ctx, "jdk-detection-result", jdks)
 		}

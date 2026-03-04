@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 )
@@ -23,10 +24,10 @@ var (
 	logger       *Logger
 	loggerMutex  sync.Mutex
 	defaultPath  string
-	eventEmitter func(level string, message string)
+	eventEmitter func(level string, message string, ts string, line string)
 )
 
-func SetEventEmitter(emitter func(level string, message string)) {
+func SetEventEmitter(emitter func(level string, message string, ts string, line string)) {
 	loggerMutex.Lock()
 	defer loggerMutex.Unlock()
 	eventEmitter = emitter
@@ -76,7 +77,11 @@ func Init(level Level) {
 		return
 	}
 
-	consoleWriter := os.Stdout
+	var consoleWriter io.Writer = os.Stdout
+	// Suppress console output when running wailsbindings to avoid interfering with Wails CLI output
+	if strings.Contains(strings.ToLower(filepath.Base(os.Args[0])), "wailsbindings") {
+		consoleWriter = io.Discard
+	}
 
 	logger = &Logger{
 		level:      level,
@@ -95,11 +100,10 @@ func Init(level Level) {
 func getScriptDir() string {
 	exePath, err := os.Executable()
 	if err != nil {
-		fmt.Printf("Failed to get executable path: %v\n", err)
+		// Fallback silently
 		return ""
 	}
 	dir := filepath.Dir(exePath)
-	fmt.Printf("Executable path: %s, Directory: %s\n", exePath, dir)
 	return dir
 }
 
@@ -191,9 +195,7 @@ func (l *Logger) log(level Level, format string, v ...interface{}) {
 	l.mu.Unlock()
 
 	if eventEmitter != nil {
-		go func() {
-			eventEmitter(levelStr, msg)
-		}()
+		eventEmitter(levelStr, msg, timestamp, logLine)
 	}
 }
 

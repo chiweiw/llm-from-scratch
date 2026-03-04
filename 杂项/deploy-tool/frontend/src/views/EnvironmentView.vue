@@ -19,7 +19,10 @@ onMounted(async () => {
 });
 
 function selectEnvironment(env: Environment) {
-  editingEnv.value = JSON.parse(JSON.stringify(env));
+  const copy = JSON.parse(JSON.stringify(env));
+  copy.servers = Array.isArray(copy.servers) ? copy.servers : [];
+  copy.targetFiles = Array.isArray(copy.targetFiles) ? copy.targetFiles : [];
+  editingEnv.value = copy;
   activeTab.value = "basic";
   envStore.checkResult = null;
 }
@@ -32,6 +35,9 @@ async function addNewEnvironment() {
 
 function addServer() {
   if (!editingEnv.value) return;
+  if (!Array.isArray(editingEnv.value.servers)) {
+    editingEnv.value.servers = [];
+  }
   editingEnv.value.servers.push(envStore.createNewServer());
 }
 
@@ -42,6 +48,9 @@ function removeServer(index: number) {
 
 function addTargetFile() {
   if (!editingEnv.value) return;
+  if (!Array.isArray(editingEnv.value.targetFiles)) {
+    editingEnv.value.targetFiles = [];
+  }
   editingEnv.value.targetFiles.push(envStore.createNewTargetFile());
 }
 
@@ -438,14 +447,14 @@ async function checkCurrentEnvironment() {
           </div>
 
           <div
-            v-if="editingEnv.servers.length === 0"
+            v-if="(editingEnv?.servers?.length ?? 0) === 0"
             class="py-8 text-center text-gray-500"
           >
             暂无服务器配置，请添加
           </div>
           <div v-else class="space-y-4">
             <div
-              v-for="(server, index) in editingEnv.servers"
+              v-for="(server, index) in editingEnv?.servers || []"
               :key="server.id"
               class="rounded-md border p-4"
             >
@@ -577,14 +586,14 @@ async function checkCurrentEnvironment() {
           </div>
 
           <div
-            v-if="editingEnv.targetFiles.length === 0"
+            v-if="(editingEnv?.targetFiles?.length ?? 0) === 0"
             class="py-8 text-center text-gray-500"
           >
             暂无目标文件，请添加
           </div>
           <div v-else class="space-y-4">
             <div
-              v-for="(file, index) in editingEnv.targetFiles"
+              v-for="(file, index) in editingEnv?.targetFiles || []"
               :key="file.id"
               class="rounded-md border p-4"
             >

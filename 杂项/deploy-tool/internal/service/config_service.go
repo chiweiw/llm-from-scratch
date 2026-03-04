@@ -1,23 +1,28 @@
 package service
 
 import (
+	filecfg "deploy-tool/internal/config"
+	"deploy-tool/internal/dao"
 	"deploy-tool/internal/db"
 	"deploy-tool/internal/model/entity"
-	"deploy-tool/pkg/utils"
+	"deploy-tool/internal/utils"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 )
 
 type ConfigService struct {
-	envDAO          db.EnvironmentDAO
+	envDAO           db.EnvironmentDAO
 	globalSettingDAO db.GlobalSettingDAO
 	systemDefaultDAO db.SystemDefaultDAO
-	serverConfigDAO db.ServerConfigDAO
-	targetFileDAO   db.TargetFileDAO
-	mu              sync.RWMutex
-	cfg             *entity.AppConfig
+	serverConfigDAO  db.ServerConfigDAO
+	targetFileDAO    db.TargetFileDAO
+	mu               sync.RWMutex
+	cfg              *entity.AppConfig
 }
 
 func NewConfigService(
@@ -28,17 +33,28 @@ func NewConfigService(
 	targetFileDAO db.TargetFileDAO,
 ) *ConfigService {
 	return &ConfigService{
-		envDAO:          envDAO,
+		envDAO:           envDAO,
 		globalSettingDAO: globalSettingDAO,
 		systemDefaultDAO: systemDefaultDAO,
-		serverConfigDAO: serverConfigDAO,
-		targetFileDAO:   targetFileDAO,
+		serverConfigDAO:  serverConfigDAO,
+		targetFileDAO:    targetFileDAO,
 	}
 }
 
 func (s *ConfigService) Load() {
 	s.mu.Lock()
-	defer s.mu.Unlock()
+
+	// In Wails bindings generation process, avoid touching the database to prevent deadlocks/side effects
+	if isBindingsProcess() {
+		s.cfg = &entity.AppConfig{
+			Settings:       defaultSettings(),
+			SystemDefaults: defaultSystemDefaults(),
+			Environments:   []entity.Environment{},
+			History:        []entity.DeployHistory{},
+		}
+		s.mu.Unlock()
+		return
+	}
 
 	s.cfg = &entity.AppConfig{
 		Settings:       s.loadSettings(),
@@ -47,9 +63,39 @@ func (s *ConfigService) Load() {
 		History:        []entity.DeployHistory{},
 	}
 
-	if len(s.cfg.Environments) == 0 {
-		s.createDefaultEnvironment()
+	needDefault := len(s.cfg.Environments) == 0
+	s.mu.Unlock()
+
+	if needDefault {
+		if !s.tryImportFromJSON() {
+			s.createDefaultEnvironment()
+		}
 	}
+}
+
+func (s *ConfigService) tryImportFromJSON() bool {
+	fdao := dao.NewFileConfigDAO(filecfg.Default())
+	cfgFromFile, err := fdao.Load()
+	if err != nil || cfgFromFile == nil {
+		return false
+	}
+
+	_ = s.SaveSettings(cfgFromFile.Settings)
+	_ = s.SaveSystemDefaults(cfgFromFile.SystemDefaults)
+
+	imported := 0
+	for _, env := range cfgFromFile.Environments {
+		if env.Servers == nil {
+			env.Servers = []entity.ServerConfig{}
+		}
+		if env.TargetFiles == nil {
+			env.TargetFiles = []entity.TargetFile{}
+		}
+		if err := s.UpsertEnvironment(env); err == nil {
+			imported++
+		}
+	}
+	return imported > 0
 }
 
 func (s *ConfigService) Save() error {
@@ -378,7 +424,6 @@ func (s *ConfigService) loadEnvironments() []entity.Environment {
 		for _, dbServer := range servers {
 			env.Servers = append(env.Servers, entity.ServerConfig{
 				ID:            dbServer.ID,
-				EnvironmentID: dbServer.EnvironmentID,
 				Name:          dbServer.Name,
 				Host:          dbServer.Host,
 				Port:          dbServer.Port,
@@ -394,11 +439,10 @@ func (s *ConfigService) loadEnvironments() []entity.Environment {
 		files, _ := s.targetFileDAO.GetByEnvironmentID(dbEnv.ID)
 		for _, dbFile := range files {
 			env.TargetFiles = append(env.TargetFiles, entity.TargetFile{
-				ID:            dbFile.ID,
-				EnvironmentID: dbFile.EnvironmentID,
-				LocalPath:     dbFile.LocalPath,
-				RemoteName:    dbFile.RemoteName,
-				DefaultCheck:  dbFile.DefaultCheck,
+				ID:           dbFile.ID,
+				LocalPath:    dbFile.LocalPath,
+				RemoteName:   dbFile.RemoteName,
+				DefaultCheck: dbFile.DefaultCheck,
 			})
 		}
 
@@ -448,4 +492,9 @@ func defaultSystemDefaults() entity.SystemDefaultConfig {
 		MavenRepoPath:     "",
 		MavenArgs:         []string{},
 	}
+}
+
+func isBindingsProcess() bool {
+	base := strings.ToLower(filepath.Base(os.Args[0]))
+	return strings.Contains(base, "wailsbindings")
 }

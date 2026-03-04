@@ -182,16 +182,34 @@ func (s *DeployService) executeDeploy(ctx context.Context, env *entity.Environme
 }
 
 func (s *DeployService) checkEnvironment(env *entity.Environment) error {
-	if env.ProjectRoot == "" {
-		return fmt.Errorf("项目根目录不能为空")
+	if s.configService == nil {
+		return fmt.Errorf("config service 未初始化")
 	}
-
 	defaults := s.configService.GetSystemDefaults()
-
-	if env.ProjectRoot == "" && defaults.JdkPath == "" {
-		return fmt.Errorf("未配置 JDK 路径")
+	result := CheckEnvironment(env, defaults)
+	if result == nil {
+		return fmt.Errorf("环境检查失败：未知错误")
 	}
-
+	if !result.Success {
+		logger.Error("%s", result.Summary)
+		for _, item := range result.Checks {
+			switch item.Status {
+			case entity.CheckStatusFail:
+				if item.Message != "" { logger.Error("%s - %s", item.Name, item.Message) } else { logger.Error("%s", item.Name) }
+			case entity.CheckStatusWarning:
+				if item.Message != "" { logger.Warn("%s - %s", item.Name, item.Message) } else { logger.Warn("%s", item.Name) }
+			default:
+				if item.Message != "" { logger.Info("%s - %s", item.Name, item.Message) } else { logger.Info("%s", item.Name) }
+			}
+		}
+		return fmt.Errorf("环境检查未通过")
+	}
+	// 仅有警告情况下，记录警告后继续
+	for _, item := range result.Checks {
+		if item.Status == entity.CheckStatusWarning {
+			if item.Message != "" { logger.Warn("%s - %s", item.Name, item.Message) } else { logger.Warn("%s", item.Name) }
+		}
+	}
 	return nil
 }
 

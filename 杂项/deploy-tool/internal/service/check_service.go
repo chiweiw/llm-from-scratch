@@ -2,6 +2,7 @@ package service
 
 import (
 	"deploy-tool/internal/model/entity"
+	"deploy-tool/internal/utils"
 	"fmt"
 	"os"
 	"os/exec"
@@ -222,7 +223,7 @@ func CheckServers(env *entity.Environment) []entity.CheckItem {
 	}
 
 	for _, server := range env.Servers {
-		checkItem := CheckSFTPServer(&server)
+		checkItem := utils.CheckSFTPServer(&server)
 		checks = append(checks, *checkItem)
 	}
 
@@ -247,4 +248,3 @@ func checkPathExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
 }
-

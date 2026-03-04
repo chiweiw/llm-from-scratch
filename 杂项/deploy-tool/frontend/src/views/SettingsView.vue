@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, onMounted } from "vue";
 import { useSettingsStore } from "../stores/settings";
-import { EventsOn, EventsOff } from "../../wailsjs/runtime/runtime";
+import { useWailsEvent } from "@/lib/useWailsEvent";
 
 const settingsStore = useSettingsStore();
 const activeTab = ref("general");
@@ -14,30 +14,22 @@ const successMsg = ref("");
 
 onMounted(async () => {
   await settingsStore.fetchAll();
-
-  EventsOn(
-    "jdk-detection-result",
-    (jdks: { path: string; source: string }[] | null) => {
-      const safeJdks = Array.isArray(jdks) ? jdks : [];
-      console.log("Received JDK detection result:", safeJdks);
-      detectingJdk.value = false;
-      detectedJdks.value = safeJdks;
-      if (safeJdks.length > 0) {
-        settingsStore.systemDefaults.jdkPath = safeJdks[0].path;
-        successMsg.value = "检测到 " + safeJdks.length + " 个 JDK";
-      } else {
-        errorMsg.value = "未检测到 JDK，请手动配置";
-      }
-    }
-  );
-
   if (!settingsStore.systemDefaults.jdkPath) {
     await detectJdk();
   }
 });
 
-onUnmounted(() => {
-  EventsOff("jdk-detection-result");
+useWailsEvent("jdk-detection-result", (jdks: { path: string; source: string }[] | null) => {
+  const safeJdks = Array.isArray(jdks) ? jdks : [];
+  console.log("Received JDK detection result:", safeJdks);
+  detectingJdk.value = false;
+  detectedJdks.value = safeJdks;
+  if (safeJdks.length > 0) {
+    settingsStore.systemDefaults.jdkPath = safeJdks[0].path;
+    successMsg.value = "检测到 " + safeJdks.length + " 个 JDK";
+  } else {
+    errorMsg.value = "未检测到 JDK，请手动配置";
+  }
 });
 
 async function saveSettings() {
