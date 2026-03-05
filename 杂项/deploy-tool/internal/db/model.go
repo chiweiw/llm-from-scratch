@@ -22,6 +22,7 @@ type Environment struct {
 	Identifier    string `db:"identifier" json:"identifier"`
 	Description   string `db:"description" json:"description"`
 	ProjectRoot   string `db:"project_root" json:"projectRoot"`
+	BuildType     string `db:"build_type" json:"buildType"`
 	CloudDeploy   bool   `db:"cloud_deploy" json:"cloudDeploy"`
 	Timeout       int    `db:"timeout" json:"timeout"`
 	BackupCleanup bool   `db:"backup_cleanup" json:"backupCleanup"`
@@ -51,6 +52,7 @@ type TargetFile struct {
 	EnvironmentID string `db:"environment_id" json:"environmentId"`
 	LocalPath     string `db:"local_path" json:"localPath"`
 	RemoteName    string `db:"remote_name" json:"remoteName"`
+	UrlPath       string `db:"url_path" json:"urlPath"`
 	DefaultCheck  bool   `db:"default_check" json:"defaultCheck"`
 	CreatedAt     int64  `db:"created_at" json:"createdAt"`
 	UpdatedAt     int64  `db:"updated_at" json:"updatedAt"`

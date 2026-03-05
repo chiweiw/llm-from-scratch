@@ -51,6 +51,7 @@ function resetToDefaults() {
     backupCleanup: true,
     notifyOnComplete: false,
     cloudDeploy: false,
+    offlineBuild: true,
     theme: "",
     language: "",
   };
@@ -174,21 +175,21 @@ function selectJdk(jdk: { path: string; source: string }) {
 <template>
   <div class="h-full overflow-y-auto p-6">
     <div class="mx-auto max-w-4xl space-y-6">
-      <div class="flex items-center justify-between">
+      <div class="flex items-start justify-between">
         <div>
-          <h1 class="text-2xl font-bold">系统设置</h1>
-          <p class="text-gray-500">配置应用程序的全局设置和默认值</p>
+          <h1 class="text-3xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent w-fit pb-1">系统设置</h1>
+          <p class="text-muted-foreground mt-2 text-sm">配置应用程序的全局设置和默认值</p>
         </div>
-        <div class="flex gap-2">
+        <div class="flex gap-3">
           <button
-            class="rounded-md border px-3 py-2 text-sm hover:bg-gray-50"
+            class="rounded-md border px-4 py-2 text-sm font-medium transition-all hover:bg-accent hover:shadow-sm"
             @click="resetToDefaults"
             type="button"
           >
             重置
           </button>
           <button
-            class="rounded-md bg-primary px-4 py-2 text-sm text-white hover:bg-primary/90"
+            class="rounded-md bg-primary px-5 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-primary/90 hover:shadow-md hover:-translate-y-0.5"
             @click="saveSettings"
             :disabled="settingsStore.saving"
             type="button"
@@ -254,60 +255,95 @@ function selectJdk(jdk: { path: string; source: string }) {
                 />
               </div>
             </div>
-            <!-- 部署前自动备份 Toggle -->
-            <div class="flex items-center justify-between rounded-md border border-gray-200 p-3">
-              <div>
-                <div class="text-sm font-medium">部署前自动备份</div>
+            <div class="grid grid-cols-2 gap-4">
+              <div
+                class="flex items-center justify-between rounded-md border border-gray-200 p-3"
+              >
+                <div>
+                  <div class="text-sm font-medium">部署前自动备份</div>
+                  <div class="text-xs text-gray-500">
+                    上传前先备份服务器上的旧文件
+                  </div>
+                </div>
+                <label class="relative inline-flex cursor-pointer items-center">
+                  <input
+                    type="checkbox"
+                    class="peer sr-only"
+                    v-model="settingsStore.globalSettings.backupEnabled"
+                  />
+                  <div
+                    class="h-6 w-11 rounded-full bg-gray-200 peer-checked:bg-blue-500 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-5"
+                  ></div>
+                </label>
               </div>
-              <label class="relative inline-flex cursor-pointer items-center">
-                <input
-                  type="checkbox"
-                  class="peer sr-only"
-                  v-model="settingsStore.globalSettings.backupEnabled"
-                />
-                <div
-                  class="h-6 w-11 rounded-full bg-gray-200 peer-checked:bg-blue-500 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-5"
-                ></div>
-              </label>
-            </div>
 
-            <!-- 云端部署（默认） Toggle -->
-            <div class="flex items-center justify-between rounded-md border border-gray-200 p-3">
-              <div>
-                <div class="text-sm font-medium">云端部署（默认）</div>
+              <div
+                class="flex items-center justify-between rounded-md border border-gray-200 p-3"
+              >
+                <div>
+                  <div class="text-sm font-medium">云端部署（默认）</div>
+                  <div class="text-xs text-gray-500">
+                    开启后将上传文件并执行远程操作
+                  </div>
+                </div>
+                <label class="relative inline-flex cursor-pointer items-center">
+                  <input
+                    type="checkbox"
+                    class="peer sr-only"
+                    v-model="settingsStore.globalSettings.cloudDeploy"
+                  />
+                  <div
+                    class="h-6 w-11 rounded-full bg-gray-200 peer-checked:bg-blue-500 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-5"
+                  ></div>
+                </label>
               </div>
-              <label class="relative inline-flex cursor-pointer items-center">
-                <input
-                  type="checkbox"
-                  class="peer sr-only"
-                  v-model="settingsStore.globalSettings.cloudDeploy"
-                />
-                <div
-                  class="h-6 w-11 rounded-full bg-gray-200 peer-checked:bg-blue-500 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-5"
-                ></div>
-              </label>
-            </div>
 
-            <!-- 部署完成后发送通知 Toggle -->
-            <div class="flex items-center justify-between rounded-md border border-gray-200 p-3">
-              <div>
-                <div class="text-sm font-medium">部署完成后发送通知</div>
+              <div
+                class="flex items-center justify-between rounded-md border border-gray-200 p-3"
+              >
+                <div>
+                  <div class="text-sm font-medium">离线打包（默认）</div>
+                  <div class="text-xs text-gray-500">
+                    Maven 添加 -o/--offline，不访问远程仓库
+                  </div>
+                </div>
+                <label class="relative inline-flex cursor-pointer items-center">
+                  <input
+                    type="checkbox"
+                    class="peer sr-only"
+                    v-model="settingsStore.globalSettings.offlineBuild"
+                  />
+                  <div
+                    class="h-6 w-11 rounded-full bg-gray-200 peer-checked:bg-blue-500 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-5"
+                  ></div>
+                </label>
               </div>
-              <label class="relative inline-flex cursor-pointer items-center">
-                <input
-                  type="checkbox"
-                  class="peer sr-only"
-                  v-model="settingsStore.globalSettings.notifyOnComplete"
-                />
-                <div
-                  class="h-6 w-11 rounded-full bg-gray-200 peer-checked:bg-blue-500 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-5"
-                ></div>
-              </label>
+
+              <div
+                class="flex items-center justify-between rounded-md border border-gray-200 p-3"
+              >
+                <div>
+                  <div class="text-sm font-medium">部署完成后发送通知</div>
+                  <div class="text-xs text-gray-500">
+                    部署成功或失败后发送提醒
+                  </div>
+                </div>
+                <label class="relative inline-flex cursor-pointer items-center">
+                  <input
+                    type="checkbox"
+                    class="peer sr-only"
+                    v-model="settingsStore.globalSettings.notifyOnComplete"
+                  />
+                  <div
+                    class="h-6 w-11 rounded-full bg-gray-200 peer-checked:bg-blue-500 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-5"
+                  ></div>
+                </label>
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="rounded-md border p-4">
+        <!-- <div class="rounded-md border p-4">
           <h3 class="text-lg font-medium">外观设置</h3>
           <p class="mb-4 text-sm text-gray-500">配置应用程序的外观和语言</p>
           <div class="space-y-4">
@@ -336,7 +372,7 @@ function selectJdk(jdk: { path: string; source: string }) {
               </div>
             </div>
           </div>
-        </div>
+        </div> -->
       </div>
 
       <div v-show="activeTab === 'defaults'" class="space-y-4">

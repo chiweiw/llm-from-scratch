@@ -172,6 +172,7 @@ export namespace entity {
 	    id: string;
 	    localPath: string;
 	    remoteName: string;
+	    urlPath: string;
 	    defaultCheck: boolean;
 	
 	    static createFrom(source: any = {}) {
@@ -183,6 +184,7 @@ export namespace entity {
 	        this.id = source["id"];
 	        this.localPath = source["localPath"];
 	        this.remoteName = source["remoteName"];
+	        this.urlPath = source["urlPath"];
 	        this.defaultCheck = source["defaultCheck"];
 	    }
 	}
@@ -222,6 +224,7 @@ export namespace entity {
 	    identifier: string;
 	    description: string;
 	    projectRoot: string;
+	    buildType: string;
 	    cloudDeploy: boolean;
 	    timeout: number;
 	    servers: ServerConfig[];
@@ -241,6 +244,7 @@ export namespace entity {
 	        this.identifier = source["identifier"];
 	        this.description = source["description"];
 	        this.projectRoot = source["projectRoot"];
+	        this.buildType = source["buildType"];
 	        this.cloudDeploy = source["cloudDeploy"];
 	        this.timeout = source["timeout"];
 	        this.servers = this.convertValues(source["servers"], ServerConfig);
@@ -275,6 +279,7 @@ export namespace entity {
 	    backupCleanup: boolean;
 	    notifyOnComplete: boolean;
 	    cloudDeploy: boolean;
+	    offlineBuild: boolean;
 	    theme: string;
 	    language: string;
 	
@@ -290,6 +295,7 @@ export namespace entity {
 	        this.backupCleanup = source["backupCleanup"];
 	        this.notifyOnComplete = source["notifyOnComplete"];
 	        this.cloudDeploy = source["cloudDeploy"];
+	        this.offlineBuild = source["offlineBuild"];
 	        this.theme = source["theme"];
 	        this.language = source["language"];
 	    }

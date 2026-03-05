@@ -1,73 +1,88 @@
-{
-  "settings": {
-    "defaultTimeout": 0,
-    "logRetentionDays": 0,
-    "backupEnabled": false,
-    "notifyOnComplete": false,
-    "cloudDeploy": false,
-    "theme": "",
-    "language": ""
+[
+  {
+    "id": "env_dev",
+    "name": "开发环境",
+    "identifier": "dev",
+    "description": "本地开发环境 - deploy_tool.py 配置",
+    "projectRoot": "E:\\javaProject\\shanguotou-back",
+    "buildType": "backend",
+    "cloudDeploy": true,
+    "timeout": 600,
+    "servers": [
+      {
+        "id": "server_dev_1",
+        "name": "开发服务器 (192.168.8.26)",
+        "host": "192.168.8.26",
+        "port": 22221,
+        "username": "omp",
+        "password": "cB7JzLsk",
+        "deployDir": "/home/omp/shanguotou/jar/",
+        "restartScript": "/home/omp/shanguotou/jar/restart_jar_dev.sh",
+        "enableRestart": true,
+        "useSudo": false
+      }
+    ],
+    "targetFiles": [
+      {
+        "id": "jar_1",
+        "localPath": "startup\\platform-startup-project\\target\\platform-startup-project.jar",
+        "remoteName": "",
+        "urlPath": "",
+        "defaultCheck": true
+      },
+      {
+        "id": "jar_2",
+        "localPath": "startup\\platform-startup-system\\target\\platform-startup-system.jar",
+        "remoteName": "",
+        "urlPath": "",
+        "defaultCheck": true
+      },
+      {
+        "id": "jar_3",
+        "localPath": "startup\\platform-startup-customer\\target\\platform-startup-customer.jar",
+        "remoteName": "",
+        "urlPath": "",
+        "defaultCheck": false
+      }
+    ],
+    "checkStatus": "unchecked",
+    "createdAt": 1772360754,
+    "updatedAt": 1772616096
   },
-  "systemDefaults": {
-    "jdkPath": "C:\\Program Files\\Java\\jdk1.8.0_261",
-    "mavenPath": "E:\\javaTools\\apache-maven-3.8.1\\bin\\mvn.cmd",
-    "mavenSettingsPath": "D:\\java_tools\\apache-maven-3.9.12\\conf\\settings_sgt0903.xml",
-    "mavenRepoPath": "D:\\soft\\maven_repository",
-    "mavenArgs": [
-      "clean",
-      "package",
-      "-DskipTests",
-      "-Dmaven.repo.local=D:\\soft\\maven_repository"
-    ]
-  },
-  "environments": [
-    {
-      "id": "env_dev",
-      "name": "开发环境",
-      "identifier": "dev",
-      "description": "本地开发环境 - deploy_tool.py 配置",
-      "projectRoot": "E:\\javaProject\\shanguotou-back",
-      "cloudDeploy": true,
-      "timeout": 600,
-      "backupCleanup": false,
-      "servers": [
-        {
-          "id": "server_dev_1",
-          "name": "开发服务器 (192.168.8.26)",
-          "host": "192.168.8.26",
-          "port": 22221,
-          "username": "omp",
-          "password": "cB7JzLsk",
-          "deployDir": "/home/omp/shanguotou/jar/",
-          "restartScript": "/home/omp/shanguotou/jar/restart_jar_dev.sh",
-          "enableRestart": true,
-          "useSudo": false
-        }
-      ],
-      "targetFiles": [
-        {
-          "id": "jar_1",
-          "localPath": "startup\\platform-startup-project\\target\\platform-startup-project.jar",
-          "remoteName": "",
-          "defaultCheck": true
-        },
-        {
-          "id": "jar_2",
-          "localPath": "startup\\platform-startup-system\\target\\platform-startup-system.jar",
-          "remoteName": "",
-          "defaultCheck": true
-        },
-        {
-          "id": "jar_3",
-          "localPath": "startup\\platform-startup-customer\\target\\platform-startup-customer.jar",
-          "remoteName": "",
-          "defaultCheck": false
-        }
-      ],
-      "checkStatus": "unchecked",
-      "createdAt": 1772360754,
-      "updatedAt": 1772616096
-    }
-  ],
-  "history": []
-}
+  {
+    "id": "env_fe_dev",
+    "name": "开发环境",
+    "identifier": "dev-fe",
+    "description": "前端开发环境 - npm build + dist.zip",
+    "projectRoot": "E:\\javaProject\\shanguotou-front",
+    "buildType": "frontend",
+    "cloudDeploy": true,
+    "timeout": 600,
+    "servers": [
+      {
+        "id": "server_fe_dev_1",
+        "name": "开发服务器 (192.168.8.26)",
+        "host": "192.168.8.26",
+        "port": 22221,
+        "username": "omp",
+        "password": "cB7JzLsk",
+        "deployDir": "",
+        "restartScript": "",
+        "enableRestart": false,
+        "useSudo": false
+      }
+    ],
+    "targetFiles": [
+      {
+        "id": "file_fe_1",
+        "localPath": "dist.zip",
+        "remoteName": "dist.zip",
+        "urlPath": "/data/test/web",
+        "defaultCheck": true
+      }
+    ],
+    "checkStatus": "unchecked",
+    "createdAt": 1772360754,
+    "updatedAt": 1772616096
+  }
+]

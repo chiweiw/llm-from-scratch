@@ -1,25 +1,12 @@
 <script setup lang="ts">
 import { useI18n } from "vue-i18n";
 import { useRoute } from "vue-router";
-import { computed } from "vue";
 
 const { availableLocales: languages, locale } = useI18n();
 const route = useRoute();
 
-const currentTitle = computed(() => {
-  return (route.meta.title as string) || "简易发包工具";
-});
-
 const onclickLanguageHandle = (item: string) => {
   item !== locale.value ? (locale.value = item) : false;
-};
-
-const onclickMinimise = () => {
-  window.runtime.WindowMinimise();
-};
-
-const onclickQuit = () => {
-  window.runtime.Quit();
 };
 
 const navItems = [
@@ -32,37 +19,37 @@ const navItems = [
 
 <template>
   <div class="flex h-screen bg-background text-foreground">
-    <aside class="w-56 border-r bg-card flex flex-col">
-      <div class="p-4 border-b">
-        <h1 class="text-lg font-bold">简易发包工具 v2.0</h1>
+    <aside class="w-64 border-r bg-card flex flex-col shadow-lg z-10">
+      <div class="p-6 border-b flex items-center justify-center">
+        <h1 class="text-xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">简易发包工具 v2.0</h1>
       </div>
-      <nav class="flex-1 p-2">
+      <nav class="flex-1 px-4 py-8 flex flex-col gap-6">
         <router-link
           v-for="item in navItems"
           :key="item.path"
           :to="item.path"
-          class="flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors"
+          class="flex items-center gap-4 px-6 py-4 rounded-xl text-base font-medium transition-all duration-300 group relative"
           :class="[
             route.path === item.path
-              ? 'bg-primary text-primary-foreground'
-              : 'hover:bg-accent hover:text-accent-foreground',
+              ? 'bg-primary text-primary-foreground shadow-lg scale-105'
+              : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground hover:translate-x-1',
           ]"
         >
-          <span>{{ item.icon }}</span>
-          <span>{{ item.name }}</span>
+          <span class="text-2xl group-hover:scale-110 transition-transform duration-300">{{ item.icon }}</span>
+          <span class="tracking-wide">{{ item.name }}</span>
         </router-link>
       </nav>
-      <div class="p-4 border-t">
-        <div class="flex gap-1">
+      <div class="p-6 border-t bg-card/50 flex justify-center">
+        <div class="flex gap-2 p-1 bg-background/50 rounded-lg">
           <button
             v-for="item in languages"
             :key="item"
             @click="onclickLanguageHandle(item)"
-            class="px-2 py-1 text-xs rounded transition-colors"
+            class="px-4 py-1.5 text-xs font-medium rounded-md transition-all duration-200"
             :class="[
               item === locale
-                ? 'bg-primary text-primary-foreground'
-                : 'hover:bg-accent',
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
             ]"
           >
             {{ item === "zh-Hans" ? "中文" : "EN" }}
@@ -72,27 +59,6 @@ const navItems = [
     </aside>
 
     <main class="flex-1 flex flex-col overflow-hidden">
-      <header
-        class="h-12 border-b flex items-center justify-between px-4 bg-card/50"
-        style="--wails-draggable: drag"
-      >
-        <span class="text-sm text-muted-foreground">{{ currentTitle }}</span>
-        <div class="flex gap-2" style="--wails-draggable: no-drag">
-          <button
-            @click="onclickMinimise"
-            class="w-8 h-8 rounded hover:bg-accent flex items-center justify-center text-sm"
-          >
-            ─
-          </button>
-          <button
-            @click="onclickQuit"
-            class="w-8 h-8 rounded hover:bg-destructive hover:text-destructive-foreground flex items-center justify-center text-sm"
-          >
-            ✕
-          </button>
-        </div>
-      </header>
-
       <div class="flex-1 overflow-auto">
         <router-view v-slot="{ Component }">
           <keep-alive>

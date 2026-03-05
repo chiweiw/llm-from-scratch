@@ -10,6 +10,7 @@ export const useSettingsStore = defineStore("settings", () => {
     backupCleanup: true,
     notifyOnComplete: false,
     cloudDeploy: false,
+    offlineBuild: true,
     theme: "",
     language: "",
   });

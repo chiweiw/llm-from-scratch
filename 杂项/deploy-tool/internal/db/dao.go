@@ -83,7 +83,7 @@ func NewEnvironmentDAO(database *Database) EnvironmentDAO {
 }
 
 func (d *environmentDAO) GetAll() ([]Environment, error) {
-	query := `SELECT id, name, identifier, description, project_root, cloud_deploy, 
+	query := `SELECT id, name, identifier, description, project_root, build_type, cloud_deploy, 
 			  timeout, check_status, created_at, updated_at 
 			  FROM environments ORDER BY created_at DESC`
 
@@ -98,7 +98,7 @@ func (d *environmentDAO) GetAll() ([]Environment, error) {
 		var env Environment
 		err := rows.Scan(
 			&env.ID, &env.Name, &env.Identifier, &env.Description, &env.ProjectRoot,
-			&env.CloudDeploy, &env.Timeout, &env.CheckStatus,
+			&env.BuildType, &env.CloudDeploy, &env.Timeout, &env.CheckStatus,
 			&env.CreatedAt, &env.UpdatedAt,
 		)
 		if err != nil {
@@ -110,14 +110,14 @@ func (d *environmentDAO) GetAll() ([]Environment, error) {
 }
 
 func (d *environmentDAO) GetByID(id string) (*Environment, error) {
-	query := `SELECT id, name, identifier, description, project_root, cloud_deploy, 
+	query := `SELECT id, name, identifier, description, project_root, build_type, cloud_deploy, 
 			  timeout, check_status, created_at, updated_at 
 			  FROM environments WHERE id = ?`
 
 	var env Environment
 	err := d.db.QueryRow(query, id).Scan(
 		&env.ID, &env.Name, &env.Identifier, &env.Description, &env.ProjectRoot,
-		&env.CloudDeploy, &env.Timeout, &env.CheckStatus,
+		&env.BuildType, &env.CloudDeploy, &env.Timeout, &env.CheckStatus,
 		&env.CreatedAt, &env.UpdatedAt,
 	)
 	if err != nil {
@@ -127,14 +127,14 @@ func (d *environmentDAO) GetByID(id string) (*Environment, error) {
 }
 
 func (d *environmentDAO) GetByIdentifier(identifier string) (*Environment, error) {
-	query := `SELECT id, name, identifier, description, project_root, cloud_deploy, 
+	query := `SELECT id, name, identifier, description, project_root, build_type, cloud_deploy, 
 			  timeout, check_status, created_at, updated_at 
 			  FROM environments WHERE identifier = ?`
 
 	var env Environment
 	err := d.db.QueryRow(query, identifier).Scan(
 		&env.ID, &env.Name, &env.Identifier, &env.Description, &env.ProjectRoot,
-		&env.CloudDeploy, &env.Timeout, &env.CheckStatus,
+		&env.BuildType, &env.CloudDeploy, &env.Timeout, &env.CheckStatus,
 		&env.CreatedAt, &env.UpdatedAt,
 	)
 	if err != nil {
@@ -144,9 +144,9 @@ func (d *environmentDAO) GetByIdentifier(identifier string) (*Environment, error
 }
 
 func (d *environmentDAO) Create(env *Environment) error {
-	query := `INSERT OR REPLACE INTO environments (id, name, identifier, description, project_root, 
+	query := `INSERT OR REPLACE INTO environments (id, name, identifier, description, project_root, build_type,
 			  cloud_deploy, timeout, check_status, created_at, updated_at) 
-			  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+			  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 	now := time.Now().Unix()
 	createdAt := env.CreatedAt
@@ -154,19 +154,19 @@ func (d *environmentDAO) Create(env *Environment) error {
 		createdAt = now
 	}
 	_, err := d.db.Exec(query, env.ID, env.Name, env.Identifier, env.Description,
-		env.ProjectRoot, env.CloudDeploy, env.Timeout,
+		env.ProjectRoot, env.BuildType, env.CloudDeploy, env.Timeout,
 		env.CheckStatus, createdAt, now)
 	return err
 }
 
 func (d *environmentDAO) Update(env *Environment) error {
 	query := `UPDATE environments SET name = ?, identifier = ?, description = ?, 
-			  project_root = ?, cloud_deploy = ?, timeout = ?, 
+			  project_root = ?, build_type = ?, cloud_deploy = ?, timeout = ?, 
 			  check_status = ?, updated_at = ? WHERE id = ?`
 
 	now := time.Now().Unix()
 	_, err := d.db.Exec(query, env.Name, env.Identifier, env.Description,
-		env.ProjectRoot, env.CloudDeploy, env.Timeout,
+		env.ProjectRoot, env.BuildType, env.CloudDeploy, env.Timeout,
 		env.CheckStatus, now, env.ID)
 	return err
 }
@@ -412,7 +412,7 @@ func NewTargetFileDAO(database *Database) TargetFileDAO {
 }
 
 func (d *targetFileDAO) GetByEnvironmentID(envID string) ([]TargetFile, error) {
-	query := `SELECT id, environment_id, local_path, remote_name, default_check, created_at, updated_at 
+	query := `SELECT id, environment_id, local_path, remote_name, url_path, default_check, created_at, updated_at 
 			  FROM target_files WHERE environment_id = ?`
 
 	rows, err := d.db.Query(query, envID)
@@ -424,7 +424,7 @@ func (d *targetFileDAO) GetByEnvironmentID(envID string) ([]TargetFile, error) {
 	var files []TargetFile
 	for rows.Next() {
 		var f TargetFile
-		err := rows.Scan(&f.ID, &f.EnvironmentID, &f.LocalPath, &f.RemoteName, &f.DefaultCheck, &f.CreatedAt, &f.UpdatedAt)
+		err := rows.Scan(&f.ID, &f.EnvironmentID, &f.LocalPath, &f.RemoteName, &f.UrlPath, &f.DefaultCheck, &f.CreatedAt, &f.UpdatedAt)
 		if err != nil {
 			return nil, err
 		}
@@ -434,11 +434,11 @@ func (d *targetFileDAO) GetByEnvironmentID(envID string) ([]TargetFile, error) {
 }
 
 func (d *targetFileDAO) GetByID(id string) (*TargetFile, error) {
-	query := `SELECT id, environment_id, local_path, remote_name, default_check, created_at, updated_at 
+	query := `SELECT id, environment_id, local_path, remote_name, url_path, default_check, created_at, updated_at 
 			  FROM target_files WHERE id = ?`
 
 	var f TargetFile
-	err := d.db.QueryRow(query, id).Scan(&f.ID, &f.EnvironmentID, &f.LocalPath, &f.RemoteName, &f.DefaultCheck, &f.CreatedAt, &f.UpdatedAt)
+	err := d.db.QueryRow(query, id).Scan(&f.ID, &f.EnvironmentID, &f.LocalPath, &f.RemoteName, &f.UrlPath, &f.DefaultCheck, &f.CreatedAt, &f.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -446,19 +446,19 @@ func (d *targetFileDAO) GetByID(id string) (*TargetFile, error) {
 }
 
 func (d *targetFileDAO) Create(file *TargetFile) error {
-	query := `INSERT OR REPLACE INTO target_files (id, environment_id, local_path, remote_name, default_check, created_at, updated_at) 
-			  VALUES (?, ?, ?, ?, ?, ?, ?)`
+	query := `INSERT OR REPLACE INTO target_files (id, environment_id, local_path, remote_name, url_path, default_check, created_at, updated_at) 
+			  VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
 
 	now := time.Now().Unix()
-	_, err := d.db.Exec(query, file.ID, file.EnvironmentID, file.LocalPath, file.RemoteName, file.DefaultCheck, now, now)
+	_, err := d.db.Exec(query, file.ID, file.EnvironmentID, file.LocalPath, file.RemoteName, file.UrlPath, file.DefaultCheck, now, now)
 	return err
 }
 
 func (d *targetFileDAO) Update(file *TargetFile) error {
-	query := `UPDATE target_files SET local_path = ?, remote_name = ?, default_check = ?, updated_at = ? WHERE id = ?`
+	query := `UPDATE target_files SET local_path = ?, remote_name = ?, url_path = ?, default_check = ?, updated_at = ? WHERE id = ?`
 
 	now := time.Now().Unix()
-	_, err := d.db.Exec(query, file.LocalPath, file.RemoteName, file.DefaultCheck, now, file.ID)
+	_, err := d.db.Exec(query, file.LocalPath, file.RemoteName, file.UrlPath, file.DefaultCheck, now, file.ID)
 	return err
 }
 

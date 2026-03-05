@@ -91,7 +91,10 @@ const filteredHistories = computed(() => {
 
 <template>
   <div class="h-full p-6">
-    <h1 class="text-2xl font-bold mb-6">历史记录</h1>
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent w-fit pb-1">历史记录</h1>
+      <p class="text-muted-foreground mt-2 text-sm">查看过往的部署记录与执行日志</p>
+    </div>
 
     <div class="rounded-lg border p-4 mb-4">
       <div class="grid grid-cols-4 gap-3 items-end">
@@ -149,7 +152,8 @@ const filteredHistories = computed(() => {
                   :class="{
                     'bg-green-100 text-green-800': history.status === 'success',
                     'bg-red-100 text-red-800': history.status === 'failed',
-                    'bg-yellow-100 text-yellow-800': history.status === 'canceled',
+                    'bg-yellow-100 text-yellow-800':
+                      history.status === 'canceled',
                   }"
                 >
                   {{
@@ -166,7 +170,9 @@ const filteredHistories = computed(() => {
               <td class="px-4 py-3">
                 <button
                   class="rounded border px-2 py-1 text-xs hover:bg-accent"
-                  @click="selectedId = selectedId === history.id ? '' : history.id"
+                  @click="
+                    selectedId = selectedId === history.id ? '' : history.id
+                  "
                 >
                   {{ selectedId === history.id ? "收起" : "查看" }}
                 </button>
@@ -180,22 +186,37 @@ const filteredHistories = computed(() => {
                     详情：{{ history.environmentName }}
                   </div>
                   <div class="text-xs text-muted-foreground">
-                    开始 {{ formatTime(history.startTime) }} ・ 结束 {{ formatTime(history.endTime) }}
+                    开始 {{ formatTime(history.startTime) }} ・ 结束
+                    {{ formatTime(history.endTime) }}
                   </div>
                 </div>
                 <div class="mb-3" v-if="history.errorMessage">
                   <div class="text-xs text-muted-foreground mb-1">失败原因</div>
-                  <div class="rounded border p-2 text-xs text-red-600 bg-red-50">
+                  <div
+                    class="rounded border p-2 text-xs text-red-600 bg-red-50"
+                  >
                     {{ history.errorMessage }}
                   </div>
                 </div>
                 <div>
                   <div class="flex items-center justify-between mb-1">
                     <div class="text-xs text-muted-foreground">整体日志</div>
-                    <div class="text-xs text-muted-foreground" v-if="historyStore.loadingLogs">加载中...</div>
+                    <div
+                      class="text-xs text-muted-foreground"
+                      v-if="historyStore.loadingLogs"
+                    >
+                      加载中...
+                    </div>
                   </div>
-                  <div class="rounded border bg-gray-900 text-gray-100 p-3 h-60 overflow-auto text-xs font-mono">
-                    <div v-if="historyStore.logs.length === 0" class="text-gray-400">暂无日志</div>
+                  <div
+                    class="rounded border bg-gray-900 text-gray-100 p-3 h-60 overflow-auto text-xs font-mono"
+                  >
+                    <div
+                      v-if="historyStore.logs.length === 0"
+                      class="text-gray-400"
+                    >
+                      暂无日志
+                    </div>
                     <div v-else>
                       <div
                         v-for="log in historyStore.logs"
@@ -208,7 +229,9 @@ const filteredHistories = computed(() => {
                           'text-gray-400': log.level === 'DEBUG',
                         }"
                       >
-                        <span class="text-gray-500">[{{ formatTime(log.timestamp) }}]</span>
+                        <span class="text-gray-500"
+                          >[{{ formatTime(log.timestamp) }}]</span
+                        >
                         <span class="font-bold ml-2">[{{ log.level }}]</span>
                         <span class="ml-2">{{ log.message }}</span>
                       </div>
@@ -226,7 +249,5 @@ const filteredHistories = computed(() => {
         </tbody>
       </table>
     </div>
-
-
   </div>
 </template>

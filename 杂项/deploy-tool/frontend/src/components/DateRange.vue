@@ -238,8 +238,12 @@ function dayClass(day: Date, inMonth: boolean): string {
             <div class="w-8" />
             <!-- 占位，保持标题居中 -->
           </div>
-          <div class="grid grid-cols-7 gap-1 mb-1 text-xs text-muted-foreground">
-            <div v-for="w in weekLabels" :key="w" class="text-center">{{ w }}</div>
+          <div
+            class="grid grid-cols-7 gap-1 mb-1 text-xs text-muted-foreground"
+          >
+            <div v-for="w in weekLabels" :key="w" class="text-center">
+              {{ w }}
+            </div>
           </div>
           <div class="grid grid-cols-7 gap-1">
             <button
@@ -272,8 +276,12 @@ function dayClass(day: Date, inMonth: boolean): string {
               ›
             </button>
           </div>
-          <div class="grid grid-cols-7 gap-1 mb-1 text-xs text-muted-foreground">
-            <div v-for="w in weekLabels" :key="w" class="text-center">{{ w }}</div>
+          <div
+            class="grid grid-cols-7 gap-1 mb-1 text-xs text-muted-foreground"
+          >
+            <div v-for="w in weekLabels" :key="w" class="text-center">
+              {{ w }}
+            </div>
           </div>
           <div class="grid grid-cols-7 gap-1">
             <button

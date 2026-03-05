@@ -4,6 +4,7 @@ export interface Environment {
   identifier: string;
   description: string;
   projectRoot: string;
+  buildType: string;
   cloudDeploy: boolean;
   timeout: number;
   servers: ServerConfig[];
@@ -30,6 +31,7 @@ export interface TargetFile {
   id: string;
   localPath: string;
   remoteName: string;
+  urlPath: string;
   defaultCheck: boolean;
 }
 
@@ -40,6 +42,7 @@ export interface GlobalSettings {
   backupCleanup: boolean;
   notifyOnComplete: boolean;
   cloudDeploy: boolean;
+  offlineBuild: boolean;
   theme: string;
   language: string;
 }

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type ConfigDAO interface {
@@ -57,7 +58,16 @@ func (d *FileConfigDAO) Load() (*entity.AppConfig, error) {
 
 	var raw rawConfig
 	if err := json.Unmarshal(data, &raw); err != nil {
-		return nil, err
+		var envArray []json.RawMessage
+		if err2 := json.Unmarshal(data, &envArray); err2 != nil {
+			return nil, err
+		}
+		raw = rawConfig{
+			Settings:       defaultSettings(),
+			SystemDefaults: defaultSystemDefaults(),
+			Environments:   envArray,
+			History:        []entity.DeployHistory{},
+		}
 	}
 
 	cfg := &entity.AppConfig{
@@ -90,11 +100,42 @@ func (d *FileConfigDAO) Load() (*entity.AppConfig, error) {
 				env.ProjectRoot = compat.Local.ProjectRoot
 			}
 		}
+		if strings.TrimSpace(env.BuildType) == "" {
+			env.BuildType = "backend"
+		}
 
 		cfg.Environments = append(cfg.Environments, env)
 	}
 
 	return cfg, nil
+}
+
+func defaultSettings() entity.GlobalSettings {
+	return entity.GlobalSettings{
+		DefaultTimeout:   600,
+		LogRetentionDays: 30,
+		BackupEnabled:    true,
+		NotifyOnComplete: true,
+		CloudDeploy:      true,
+		OfflineBuild:     true,
+		Theme:            "system",
+		Language:         "zh-Hans",
+	}
+}
+
+func defaultSystemDefaults() entity.SystemDefaultConfig {
+	return entity.SystemDefaultConfig{
+		JdkPath:           `C:\Program Files\Java\jdk1.8.0_261`,
+		MavenPath:         `E:\javaTools\apache-maven-3.8.1\bin\mvn.cmd`,
+		MavenSettingsPath: `D:\java_tools\apache-maven-3.9.12\conf\settings_sgt0903.xml`,
+		MavenRepoPath:     `D:\soft\maven_repository`,
+		MavenArgs: []string{
+			"clean",
+			"package",
+			"-DskipTests",
+			`-Dmaven.repo.local=D:\soft\maven_repository`,
+		},
+	}
 }
 
 func (d *FileConfigDAO) Save(cfg *entity.AppConfig) error {

@@ -7,6 +7,7 @@ type GlobalSettings struct {
 	BackupCleanup    bool   `json:"backupCleanup"`
 	NotifyOnComplete bool   `json:"notifyOnComplete"`
 	CloudDeploy      bool   `json:"cloudDeploy"`
+	OfflineBuild     bool   `json:"offlineBuild"`
 	Theme            string `json:"theme"`
 	Language         string `json:"language"`
 }

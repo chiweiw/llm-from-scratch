@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick, watch } from "vue";
+import { ref, onMounted, onUnmounted, nextTick, watch, computed } from "vue";
 import { useEnvironmentStore } from "@/stores/environment";
 import { useDeployStore } from "@/stores/deploy";
 import { useWailsEvent } from "@/lib/useWailsEvent";
@@ -16,6 +16,9 @@ const logContainer = ref<HTMLElement | null>(null);
 let progressInterval: number | undefined;
 const precheckStatus = ref<"idle" | "running" | "success" | "failed">("idle");
 const precheckResult = ref<CheckResult | null>(null);
+const selectedEnv = computed(() =>
+  envStore.environments.find((env) => env.id === selectedEnvId.value)
+);
 
 onMounted(async () => {
   await envStore.fetchEnvironments();
@@ -156,7 +159,10 @@ function cancelDeploy() {
 
 <template>
   <div class="h-full p-6">
-    <h1 class="text-2xl font-bold mb-6">部署中心</h1>
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent w-fit pb-1">部署中心</h1>
+      <p class="text-muted-foreground mt-2 text-sm">选择环境并执行应用部署任务</p>
+    </div>
 
     <div
       v-if="errorMessage"
@@ -185,9 +191,22 @@ function cancelDeploy() {
             :key="env.id"
             :value="env.id"
           >
+            {{ env.buildType === "frontend" ? "前端" : "后端" }} |
             {{ env.name }}
           </option>
         </select>
+        <span
+          v-if="selectedEnv"
+          class="rounded-full px-2 py-0.5 text-xs"
+          :class="{
+            'bg-purple-100 text-purple-700':
+              selectedEnv.buildType === 'frontend',
+            'bg-blue-100 text-blue-700':
+              !selectedEnv.buildType || selectedEnv.buildType === 'backend',
+          }"
+        >
+          {{ selectedEnv.buildType === "frontend" ? "前端环境" : "后端环境" }}
+        </span>
         <button
           @click="startDeploy"
           :disabled="!selectedEnvId || deployStore.isDeploying"

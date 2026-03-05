@@ -111,6 +111,7 @@ export const useEnvironmentStore = defineStore("environment", () => {
       identifier: "new",
       description: "",
       projectRoot: "",
+      buildType: "backend",
       cloudDeploy: true,
       timeout: 600,
       servers: [],
@@ -141,6 +142,7 @@ export const useEnvironmentStore = defineStore("environment", () => {
       id: `jar_${Date.now()}`,
       localPath: "",
       remoteName: "",
+      urlPath: "",
       defaultCheck: true,
     };
   }

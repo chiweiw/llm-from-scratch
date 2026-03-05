@@ -81,62 +81,73 @@ func CheckLocalConfig(env *entity.Environment, defaults entity.SystemDefaultConf
 		Message: projectRoot,
 	})
 
-	pomPath := filepath.Join(projectRoot, "pom.xml")
-	if !checkPathExists(pomPath) {
-		checks = append(checks, entity.CheckItem{
-			Name:    "pom.xml 文件",
-			Status:  entity.CheckStatusFail,
-			Message: "pom.xml 不存在于项目根目录",
-		})
-	}
-
-	mavenPath := strings.TrimSpace(defaults.MavenPath)
-	mavenSettingsPath := strings.TrimSpace(defaults.MavenSettingsPath)
-
-	if mavenPath != "" {
-		if !checkPathExists(mavenPath) {
+	if strings.ToLower(strings.TrimSpace(env.BuildType)) == "frontend" {
+		packagePath := filepath.Join(projectRoot, "package.json")
+		if !checkPathExists(packagePath) {
 			checks = append(checks, entity.CheckItem{
-				Name:    "Maven 路径",
-				Status:  entity.CheckStatusWarning,
-				Message: "Maven 路径不存在: " + mavenPath,
-			})
-		} else {
-			checks = append(checks, entity.CheckItem{
-				Name:    "Maven 路径",
-				Status:  entity.CheckStatusPass,
-				Message: mavenPath,
+				Name:    "package.json 文件",
+				Status:  entity.CheckStatusFail,
+				Message: "package.json 不存在于项目根目录",
 			})
 		}
 	} else {
-		found := findMavenInPath()
-		if found != "" {
+		pomPath := filepath.Join(projectRoot, "pom.xml")
+		if !checkPathExists(pomPath) {
 			checks = append(checks, entity.CheckItem{
-				Name:    "Maven 路径",
-				Status:  entity.CheckStatusPass,
-				Message: "已找到: " + found,
-			})
-		} else {
-			checks = append(checks, entity.CheckItem{
-				Name:    "Maven 路径",
-				Status:  entity.CheckStatusWarning,
-				Message: "未配置，将尝试使用系统 PATH 中的 mvn",
+				Name:    "pom.xml 文件",
+				Status:  entity.CheckStatusFail,
+				Message: "pom.xml 不存在于项目根目录",
 			})
 		}
-	}
 
-	if mavenSettingsPath != "" {
-		if !checkPathExists(mavenSettingsPath) {
-			checks = append(checks, entity.CheckItem{
-				Name:    "Maven settings.xml",
-				Status:  entity.CheckStatusWarning,
-				Message: "Maven settings.xml 不存在: " + mavenSettingsPath,
-			})
+		mavenPath := strings.TrimSpace(defaults.MavenPath)
+		mavenSettingsPath := strings.TrimSpace(defaults.MavenSettingsPath)
+
+		if mavenPath != "" {
+			if !checkPathExists(mavenPath) {
+				checks = append(checks, entity.CheckItem{
+					Name:    "Maven 路径",
+					Status:  entity.CheckStatusWarning,
+					Message: "Maven 路径不存在: " + mavenPath,
+				})
+			} else {
+				checks = append(checks, entity.CheckItem{
+					Name:    "Maven 路径",
+					Status:  entity.CheckStatusPass,
+					Message: mavenPath,
+				})
+			}
 		} else {
-			checks = append(checks, entity.CheckItem{
-				Name:    "Maven settings.xml",
-				Status:  entity.CheckStatusPass,
-				Message: mavenSettingsPath,
-			})
+			found := findMavenInPath()
+			if found != "" {
+				checks = append(checks, entity.CheckItem{
+					Name:    "Maven 路径",
+					Status:  entity.CheckStatusPass,
+					Message: "已找到: " + found,
+				})
+			} else {
+				checks = append(checks, entity.CheckItem{
+					Name:    "Maven 路径",
+					Status:  entity.CheckStatusWarning,
+					Message: "未配置，将尝试使用系统 PATH 中的 mvn",
+				})
+			}
+		}
+
+		if mavenSettingsPath != "" {
+			if !checkPathExists(mavenSettingsPath) {
+				checks = append(checks, entity.CheckItem{
+					Name:    "Maven settings.xml",
+					Status:  entity.CheckStatusWarning,
+					Message: "Maven settings.xml 不存在: " + mavenSettingsPath,
+				})
+			} else {
+				checks = append(checks, entity.CheckItem{
+					Name:    "Maven settings.xml",
+					Status:  entity.CheckStatusPass,
+					Message: mavenSettingsPath,
+				})
+			}
 		}
 	}
 
@@ -167,6 +178,29 @@ func CheckTargetFiles(env *entity.Environment) []entity.CheckItem {
 
 	for _, file := range env.TargetFiles {
 		if file.LocalPath == "" {
+			continue
+		}
+		if strings.ToLower(strings.TrimSpace(env.BuildType)) == "frontend" {
+			urlPath := strings.TrimSpace(file.UrlPath)
+			if urlPath == "" {
+				checks = append(checks, entity.CheckItem{
+					Name:    "URL 路径: " + file.LocalPath,
+					Status:  entity.CheckStatusFail,
+					Message: "未配置 URL 路径",
+				})
+			} else if !strings.HasPrefix(urlPath, "/") {
+				checks = append(checks, entity.CheckItem{
+					Name:    "URL 路径: " + file.LocalPath,
+					Status:  entity.CheckStatusFail,
+					Message: "URL 路径必须以 / 开头",
+				})
+			} else {
+				checks = append(checks, entity.CheckItem{
+					Name:    "URL 路径: " + file.LocalPath,
+					Status:  entity.CheckStatusPass,
+					Message: urlPath,
+				})
+			}
 			continue
 		}
 		fullPath := filepath.Join(projectRoot, file.LocalPath)

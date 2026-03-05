@@ -6,6 +6,7 @@ type Environment struct {
 	Identifier  string         `json:"identifier"`
 	Description string         `json:"description"`
 	ProjectRoot string         `json:"projectRoot"`
+	BuildType   string         `json:"buildType"`
 	CloudDeploy bool           `json:"cloudDeploy"`
 	Timeout     int            `json:"timeout"`
 	Servers     []ServerConfig `json:"servers"`
@@ -32,5 +33,6 @@ type TargetFile struct {
 	ID           string `json:"id"`
 	LocalPath    string `json:"localPath"`
 	RemoteName   string `json:"remoteName"`
+	UrlPath      string `json:"urlPath"`
 	DefaultCheck bool   `json:"defaultCheck"`
 }

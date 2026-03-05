@@ -230,6 +230,9 @@ func (s *ConfigService) UpsertEnvironment(env entity.Environment) error {
 	}
 
 	now := time.Now().Unix()
+	if strings.TrimSpace(env.BuildType) == "" {
+		env.BuildType = "backend"
+	}
 	env.UpdatedAt = now
 
 	dbEnv := &db.Environment{
@@ -238,6 +241,7 @@ func (s *ConfigService) UpsertEnvironment(env entity.Environment) error {
 		Identifier:  env.Identifier,
 		Description: env.Description,
 		ProjectRoot: env.ProjectRoot,
+		BuildType:   env.BuildType,
 		CloudDeploy: env.CloudDeploy,
 		Timeout:     env.Timeout,
 		CheckStatus: env.CheckStatus,
@@ -285,6 +289,7 @@ func (s *ConfigService) UpsertEnvironment(env entity.Environment) error {
 			EnvironmentID: env.ID,
 			LocalPath:     file.LocalPath,
 			RemoteName:    file.RemoteName,
+			UrlPath:       file.UrlPath,
 			DefaultCheck:  file.DefaultCheck,
 		}
 
@@ -353,6 +358,9 @@ func (s *ConfigService) loadSettings() entity.GlobalSettings {
 	if cloud, ok := settingsMap["cloud_deploy"]; ok {
 		settings.CloudDeploy = cloud == "true"
 	}
+	if offline, ok := settingsMap["offline_build"]; ok {
+		settings.OfflineBuild = offline == "true"
+	}
 	if theme, ok := settingsMap["theme"]; ok {
 		settings.Theme = theme
 	}
@@ -377,6 +385,9 @@ func (s *ConfigService) saveSettings(settings entity.GlobalSettings) error {
 		return err
 	}
 	if err := s.globalSettingDAO.Set("cloud_deploy", fmt.Sprintf("%v", settings.CloudDeploy)); err != nil {
+		return err
+	}
+	if err := s.globalSettingDAO.Set("offline_build", fmt.Sprintf("%v", settings.OfflineBuild)); err != nil {
 		return err
 	}
 	if err := s.globalSettingDAO.Set("theme", settings.Theme); err != nil {
@@ -448,11 +459,15 @@ func (s *ConfigService) loadEnvironments() []entity.Environment {
 			Identifier:  dbEnv.Identifier,
 			Description: dbEnv.Description,
 			ProjectRoot: dbEnv.ProjectRoot,
+			BuildType:   dbEnv.BuildType,
 			CloudDeploy: dbEnv.CloudDeploy,
 			Timeout:     dbEnv.Timeout,
 			CheckStatus: dbEnv.CheckStatus,
 			CreatedAt:   dbEnv.CreatedAt,
 			UpdatedAt:   dbEnv.UpdatedAt,
+		}
+		if strings.TrimSpace(env.BuildType) == "" {
+			env.BuildType = "backend"
 		}
 
 		servers, _ := s.serverConfigDAO.GetByEnvironmentID(dbEnv.ID)
@@ -477,6 +492,7 @@ func (s *ConfigService) loadEnvironments() []entity.Environment {
 				ID:           dbFile.ID,
 				LocalPath:    dbFile.LocalPath,
 				RemoteName:   dbFile.RemoteName,
+				UrlPath:      dbFile.UrlPath,
 				DefaultCheck: dbFile.DefaultCheck,
 			})
 		}
@@ -495,6 +511,7 @@ func (s *ConfigService) createDefaultEnvironment() {
 		Identifier:  "dev",
 		Description: "本地开发环境 - deploy_tool.py 配置",
 		ProjectRoot: `D:\javaproject\backcode`,
+		BuildType:   "backend",
 		CloudDeploy: true,
 		Timeout:     600,
 		Servers:     []entity.ServerConfig{},
@@ -513,6 +530,7 @@ func defaultSettings() entity.GlobalSettings {
 		BackupEnabled:    true,
 		NotifyOnComplete: true,
 		CloudDeploy:      true,
+		OfflineBuild:     true,
 		Theme:            "system",
 		Language:         "zh-Hans",
 	}

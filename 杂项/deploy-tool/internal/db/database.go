@@ -86,6 +86,7 @@ func (d *Database) createTables() error {
 			identifier TEXT NOT NULL,
 			description TEXT,
 			project_root TEXT NOT NULL,
+			build_type TEXT NOT NULL DEFAULT 'backend',
 			cloud_deploy INTEGER NOT NULL DEFAULT 0,
 			timeout INTEGER NOT NULL DEFAULT 600,
 			backup_cleanup INTEGER NOT NULL DEFAULT 0,
@@ -114,6 +115,7 @@ func (d *Database) createTables() error {
 			environment_id TEXT NOT NULL,
 			local_path TEXT NOT NULL,
 			remote_name TEXT,
+			url_path TEXT,
 			default_check INTEGER NOT NULL DEFAULT 0,
 			created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
 			updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
@@ -192,6 +194,14 @@ func (d *Database) runMigrations() error {
 			name: "003_add_frontend_support",
 			sql:  "",
 		},
+		{
+			name: "004_add_build_type",
+			sql:  "",
+		},
+		{
+			name: "005_add_target_url_path",
+			sql:  "",
+		},
 	}
 
 	for _, migration := range migrations {
@@ -204,7 +214,27 @@ func (d *Database) runMigrations() error {
 			continue
 		}
 
-		if migration.sql != "" {
+		if migration.name == "004_add_build_type" {
+			exists, err := d.columnExists("environments", "build_type")
+			if err != nil {
+				return err
+			}
+			if !exists {
+				if _, err := d.db.Exec("ALTER TABLE environments ADD COLUMN build_type TEXT NOT NULL DEFAULT 'backend'"); err != nil {
+					return fmt.Errorf("执行迁移 %s 失败: %w", migration.name, err)
+				}
+			}
+		} else if migration.name == "005_add_target_url_path" {
+			exists, err := d.columnExists("target_files", "url_path")
+			if err != nil {
+				return err
+			}
+			if !exists {
+				if _, err := d.db.Exec("ALTER TABLE target_files ADD COLUMN url_path TEXT"); err != nil {
+					return fmt.Errorf("执行迁移 %s 失败: %w", migration.name, err)
+				}
+			}
+		} else if migration.sql != "" {
 			if _, err := d.db.Exec(migration.sql); err != nil {
 				return fmt.Errorf("执行迁移 %s 失败: %w", migration.name, err)
 			}
@@ -228,6 +258,31 @@ func (d *Database) isMigrationApplied(name string) (bool, error) {
 		return false, err
 	}
 	return count > 0, nil
+}
+
+func (d *Database) columnExists(table string, column string) (bool, error) {
+	rows, err := d.db.Query(fmt.Sprintf("PRAGMA table_info(%s)", table))
+	if err != nil {
+		return false, err
+	}
+	defer rows.Close()
+
+	var cid int
+	var name string
+	var ctype string
+	var notnull int
+	var dfltValue any
+	var pk int
+
+	for rows.Next() {
+		if err := rows.Scan(&cid, &name, &ctype, &notnull, &dfltValue, &pk); err != nil {
+			return false, err
+		}
+		if name == column {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func (d *Database) BeginTx() (*sql.Tx, error) {

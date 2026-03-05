@@ -22,6 +22,24 @@ function selectEnvironment(env: Environment) {
   const copy = JSON.parse(JSON.stringify(env));
   copy.servers = Array.isArray(copy.servers) ? copy.servers : [];
   copy.targetFiles = Array.isArray(copy.targetFiles) ? copy.targetFiles : [];
+  if (!copy.buildType) {
+    copy.buildType = "backend";
+  }
+  if (copy.buildType === "frontend") {
+    if (copy.targetFiles.length === 0) {
+      copy.targetFiles = [
+        {
+          id: `file_${Date.now()}`,
+          localPath: "dist.zip",
+          remoteName: "dist.zip",
+          urlPath: "",
+          defaultCheck: true,
+        },
+      ];
+    } else if (!copy.targetFiles[0].urlPath) {
+      copy.targetFiles[0].urlPath = "";
+    }
+  }
   editingEnv.value = copy;
   activeTab.value = "basic";
   envStore.checkResult = null;
@@ -48,6 +66,7 @@ function removeServer(index: number) {
 
 function addTargetFile() {
   if (!editingEnv.value) return;
+  if (editingEnv.value.buildType === "frontend") return;
   if (!Array.isArray(editingEnv.value.targetFiles)) {
     editingEnv.value.targetFiles = [];
   }
@@ -62,6 +81,20 @@ function removeTargetFile(index: number) {
 async function saveEnvironment() {
   if (!editingEnv.value) return;
   try {
+    if (!editingEnv.value.buildType) {
+      editingEnv.value.buildType = "backend";
+    }
+    if (editingEnv.value.buildType === "frontend") {
+      editingEnv.value.targetFiles = [
+        {
+          id: editingEnv.value.targetFiles?.[0]?.id || `file_${Date.now()}`,
+          localPath: "dist.zip",
+          remoteName: "dist.zip",
+          urlPath: editingEnv.value.targetFiles?.[0]?.urlPath || "",
+          defaultCheck: true,
+        },
+      ];
+    }
     await envStore.saveEnvironment(editingEnv.value);
   } catch (error) {
     console.error("Save failed:", error);
@@ -106,10 +139,10 @@ async function checkCurrentEnvironment() {
 <template>
   <div class="flex h-full">
     <aside class="w-72 border-r bg-gray-50 p-4">
-      <div class="mb-4 flex items-center justify-between">
-        <h2 class="text-lg font-semibold">环境列表</h2>
+      <div class="mb-6 flex items-center justify-between">
+        <h2 class="text-xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent w-fit pb-1">环境列表</h2>
         <button
-          class="rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground hover:bg-primary/90"
+          class="rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground hover:bg-primary/90 shadow-sm transition-all hover:shadow-md"
           @click="addNewEnvironment"
         >
           + 添加
@@ -141,21 +174,34 @@ async function checkCurrentEnvironment() {
               </div>
             </div>
             <div class="text-right">
-              <span
-                class="rounded-full px-2 py-0.5 text-xs"
-                :class="{
-                  'bg-green-100 text-green-700': env.identifier === 'dev',
-                  'bg-yellow-100 text-yellow-700': env.identifier === 'test',
-                  'bg-red-100 text-red-700': env.identifier === 'prod',
-                  'bg-gray-100 text-gray-700': ![
-                    'dev',
-                    'test',
-                    'prod',
-                  ].includes(env.identifier),
-                }"
-              >
-                {{ env.identifier }}
-              </span>
+              <div class="flex items-center justify-end gap-2">
+                <span
+                  class="rounded-full px-2 py-0.5 text-xs"
+                  :class="{
+                    'bg-purple-100 text-purple-700':
+                      env.buildType === 'frontend',
+                    'bg-blue-100 text-blue-700':
+                      !env.buildType || env.buildType === 'backend',
+                  }"
+                >
+                  {{ env.buildType === "frontend" ? "前端" : "后端" }}
+                </span>
+                <span
+                  class="rounded-full px-2 py-0.5 text-xs"
+                  :class="{
+                    'bg-green-100 text-green-700': env.identifier === 'dev',
+                    'bg-yellow-100 text-yellow-700': env.identifier === 'test',
+                    'bg-red-100 text-red-700': env.identifier === 'prod',
+                    'bg-gray-100 text-gray-700': ![
+                      'dev',
+                      'test',
+                      'prod',
+                    ].includes(env.identifier),
+                  }"
+                >
+                  {{ env.identifier }}
+                </span>
+              </div>
               <div
                 class="mt-1 text-xs"
                 :class="{
@@ -196,30 +242,30 @@ async function checkCurrentEnvironment() {
         请选择或创建一个环境
       </div>
 
-      <div v-else class="space-y-4">
-        <div class="flex items-center justify-between">
+      <div v-else class="space-y-6">
+        <div class="flex items-start justify-between">
           <div>
-            <h2 class="text-2xl font-bold">{{ editingEnv.name }}</h2>
-            <p class="text-gray-500">
+            <h2 class="text-3xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent w-fit pb-1">{{ editingEnv.name }}</h2>
+            <p class="text-muted-foreground mt-2 text-sm">
               {{ editingEnv.description || "暂无描述" }}
             </p>
           </div>
-          <div class="flex gap-2">
+          <div class="flex gap-3">
             <button
-              class="rounded-md border px-3 py-2 text-sm hover:bg-gray-50"
+              class="rounded-md border px-4 py-2 text-sm font-medium transition-all hover:bg-accent hover:shadow-sm"
               @click="checkCurrentEnvironment"
               :disabled="isChecking"
             >
               {{ isChecking ? "检查中..." : "自检" }}
             </button>
             <button
-              class="rounded-md border border-red-300 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+              class="rounded-md border border-red-200 px-4 py-2 text-sm font-medium text-red-600 transition-all hover:bg-red-50 hover:border-red-300 hover:shadow-sm"
               @click="deleteCurrentEnvironment"
             >
               删除
             </button>
             <button
-              class="rounded-md bg-primary px-4 py-2 text-sm text-white hover:bg-primary/90"
+              class="rounded-md bg-primary px-5 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-primary/90 hover:shadow-md hover:-translate-y-0.5"
               @click="saveEnvironment"
               :disabled="envStore.saving"
             >
@@ -388,12 +434,26 @@ async function checkCurrentEnvironment() {
               placeholder="D:\\javaproject\\backcode"
             />
           </div>
+          <div>
+            <label class="block text-sm font-medium">构建类型</label>
+            <select
+              v-model="editingEnv.buildType"
+              class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+            >
+              <option value="backend">后端（Maven）</option>
+              <option value="frontend">前端（npm build）</option>
+            </select>
+          </div>
           <div class="grid grid-cols-2 gap-4">
             <!-- 云端部署 Toggle -->
-            <div class="flex items-center justify-between rounded-md border border-gray-200 p-3">
+            <div
+              class="flex items-center justify-between rounded-md border border-gray-200 p-3"
+            >
               <div>
                 <div class="text-sm font-medium">云端部署</div>
-                <div class="text-xs text-gray-500">启用后将支持打包后上传服务器和远程重启</div>
+                <div class="text-xs text-gray-500">
+                  启用后将支持打包后上传服务器和远程重启
+                </div>
               </div>
               <label class="relative inline-flex cursor-pointer items-center">
                 <input
@@ -408,7 +468,9 @@ async function checkCurrentEnvironment() {
             </div>
 
             <!-- 超时时间 Input -->
-            <div class="flex flex-col justify-center rounded-md border border-gray-200 p-3">
+            <div
+              class="flex flex-col justify-center rounded-md border border-gray-200 p-3"
+            >
               <label class="block text-sm font-medium">超时时间 (秒)</label>
               <input
                 v-model.number="editingEnv.timeout"
@@ -569,9 +631,16 @@ async function checkCurrentEnvironment() {
           <div class="flex items-center justify-between rounded-md border p-4">
             <div>
               <h3 class="text-lg font-medium">目标文件配置</h3>
-              <p class="text-sm text-gray-500">需要部署的 Jar 包列表</p>
+              <p class="text-sm text-gray-500">
+                {{
+                  editingEnv?.buildType === "frontend"
+                    ? "前端部署仅上传 dist.zip"
+                    : "需要部署的 Jar 包列表"
+                }}
+              </p>
             </div>
             <button
+              v-if="editingEnv?.buildType !== 'frontend'"
               class="rounded-md bg-primary px-3 py-1.5 text-sm text-white hover:bg-primary/90"
               @click="addTargetFile"
             >
@@ -580,55 +649,109 @@ async function checkCurrentEnvironment() {
           </div>
 
           <div
-            v-if="(editingEnv?.targetFiles?.length ?? 0) === 0"
-            class="py-8 text-center text-gray-500"
+            v-if="editingEnv?.buildType === 'frontend'"
+            class="rounded-md border p-4"
           >
-            暂无目标文件，请添加
-          </div>
-          <div v-else class="space-y-4">
-            <div
-              v-for="(file, index) in editingEnv?.targetFiles || []"
-              :key="file.id"
-              class="rounded-md border p-4"
-            >
-              <div class="mb-4 flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    v-model="file.defaultCheck"
-                    class="rounded"
-                  />
-                  <h4 class="font-medium">文件 {{ index + 1 }}</h4>
-                </div>
-                <button
-                  class="text-red-500 hover:text-red-700"
-                  @click="removeTargetFile(index)"
-                >
-                  删除
-                </button>
+            <div class="mb-4 flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <input type="checkbox" checked disabled class="rounded" />
+                <h4 class="font-medium">文件 1</h4>
               </div>
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm font-medium">本地路径</label>
-                  <input
-                    v-model="file.localPath"
-                    class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
-                    placeholder="startup\xxx\target\xxx.jar"
-                  />
-                </div>
-                <div>
-                  <label class="block text-sm font-medium"
-                    >远程文件名 (可选)</label
-                  >
-                  <input
-                    v-model="file.remoteName"
-                    class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
-                    placeholder="留空则使用原文件名"
-                  />
-                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium">本地路径</label>
+                <input
+                  value="dist.zip"
+                  disabled
+                  class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium"
+                  >远程文件名 (可选)</label
+                >
+                <input
+                  value="dist.zip"
+                  disabled
+                  class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                />
+              </div>
+              <div class="col-span-2">
+                <label class="block text-sm font-medium"
+                  >URL 路径（远程绝对目录）</label
+                >
+                <input
+                  v-model="editingEnv.targetFiles[0].urlPath"
+                  class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                  placeholder="/data/test/web"
+                />
               </div>
             </div>
           </div>
+
+          <template v-else>
+            <div
+              v-if="(editingEnv?.targetFiles?.length ?? 0) === 0"
+              class="py-8 text-center text-gray-500"
+            >
+              暂无目标文件，请添加
+            </div>
+            <div v-else class="space-y-4">
+              <div
+                v-for="(file, index) in editingEnv?.targetFiles || []"
+                :key="file.id"
+                class="rounded-md border p-4"
+              >
+                <div class="mb-4 flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      v-model="file.defaultCheck"
+                      class="rounded"
+                    />
+                    <h4 class="font-medium">文件 {{ index + 1 }}</h4>
+                  </div>
+                  <button
+                    class="text-red-500 hover:text-red-700"
+                    @click="removeTargetFile(index)"
+                  >
+                    删除
+                  </button>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-sm font-medium">本地路径</label>
+                    <input
+                      v-model="file.localPath"
+                      class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                      placeholder="startup\xxx\target\xxx.jar"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium"
+                      >远程文件名 (可选)</label
+                    >
+                    <input
+                      v-model="file.remoteName"
+                      class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                      placeholder="留空则使用原文件名"
+                    />
+                  </div>
+                  <div class="col-span-2">
+                    <label class="block text-sm font-medium"
+                      >URL 路径（远程绝对目录）</label
+                    >
+                    <input
+                      v-model="file.urlPath"
+                      class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                      placeholder="例如: /data/test/web"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </template>
         </div>
       </div>
     </main>
