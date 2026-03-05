@@ -7,6 +7,7 @@ export const useSettingsStore = defineStore("settings", () => {
     defaultTimeout: 0,
     logRetentionDays: 0,
     backupEnabled: false,
+    backupCleanup: true,
     notifyOnComplete: false,
     cloudDeploy: false,
     theme: "",
@@ -43,7 +44,9 @@ export const useSettingsStore = defineStore("settings", () => {
     saving.value = true;
     try {
       const { SaveGlobalSettings } = await import("../../wailsjs/go/app/App");
-      const resp = await SaveGlobalSettings({ settings: globalSettings.value });
+      const resp = await SaveGlobalSettings({
+        settings: globalSettings.value,
+      } as any);
       if (resp.code !== 0) {
         throw new Error(resp.message || "保存失败");
       }
@@ -74,7 +77,9 @@ export const useSettingsStore = defineStore("settings", () => {
     saving.value = true;
     try {
       const { SaveSystemDefaults } = await import("../../wailsjs/go/app/App");
-      const resp = await SaveSystemDefaults({ defaults: systemDefaults.value });
+      const resp = await SaveSystemDefaults({
+        defaults: systemDefaults.value,
+      } as any);
       if (resp.code !== 0) {
         throw new Error(resp.message || "保存失败");
       }

@@ -4,6 +4,7 @@ type GlobalSettings struct {
 	DefaultTimeout   int    `json:"defaultTimeout"`
 	LogRetentionDays int    `json:"logRetentionDays"`
 	BackupEnabled    bool   `json:"backupEnabled"`
+	BackupCleanup    bool   `json:"backupCleanup"`
 	NotifyOnComplete bool   `json:"notifyOnComplete"`
 	CloudDeploy      bool   `json:"cloudDeploy"`
 	Theme            string `json:"theme"`
@@ -24,4 +25,3 @@ type AppConfig struct {
 	Environments   []Environment       `json:"environments"`
 	History        []DeployHistory     `json:"history"`
 }
-

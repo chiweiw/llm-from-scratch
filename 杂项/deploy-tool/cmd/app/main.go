@@ -1,6 +1,7 @@
 package appcmd
 
 import (
+	"context"
 	"deploy-tool/internal/app"
 	"deploy-tool/internal/db"
 	"deploy-tool/internal/logger"
@@ -46,7 +47,7 @@ func Run(assets fs.FS) error {
 
 	historyService := service.NewHistoryService(deployHistoryDAO, deployLogDAO)
 
-	deployService := service.NewDeployService()
+	deployService := service.NewDeployService(configService, historyService, context.Background())
 	deployService.SetConfigService(configService)
 	deployService.SetHistoryService(historyService)
 

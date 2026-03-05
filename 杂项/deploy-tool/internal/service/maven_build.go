@@ -2,9 +2,9 @@ package service
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"deploy-tool/internal/logger"
@@ -82,25 +83,67 @@ func (s *MavenBuildService) StartBuild(ctx context.Context, cfg *MavenBuildConfi
 		return result, err
 	}
 
-	logger.Info("执行 Maven 命令: %s %s", cmd.Path, strings.Join(cmd.Args, " "))
+	logger.Info("执行 Maven 命令: %s %s", cmd.Path, strings.Join(cmd.Args[1:], " "))
 	s.updateStepStatus("Maven 打包", entity.StepStatusRunning, "正在执行 Maven 命令...")
 
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	// 实时流式捕获 stdout / stderr
+	stdoutPipe, err := cmd.StdoutPipe()
+	if err != nil {
+		return result, fmt.Errorf("获取 stdout pipe 失败: %v", err)
+	}
+	stderrPipe, err := cmd.StderrPipe()
+	if err != nil {
+		return result, fmt.Errorf("获取 stderr pipe 失败: %v", err)
+	}
 
-	if err := cmd.Run(); err != nil {
-		logContent := stdout.String() + "\n" + stderr.String()
+	if err := cmd.Start(); err != nil {
+		return result, fmt.Errorf("启动 Maven 失败: %v", err)
+	}
+
+	// 收集所有日志行（线程安全）
+	var logMu sync.Mutex
+	var allLines []string
+
+	readLines := func(r io.Reader, isStderr bool) {
+		scanner := bufio.NewScanner(r)
+		scanner.Buffer(make([]byte, 1024*1024), 1024*1024) // 支持超长行
+		for scanner.Scan() {
+			line := scanner.Text()
+			trimmed := strings.TrimSpace(line)
+			if trimmed == "" {
+				continue
+			}
+			logMu.Lock()
+			allLines = append(allLines, trimmed)
+			logMu.Unlock()
+			// 根据关键字判断日志级别，实时推送到前端
+			lower := strings.ToLower(trimmed)
+			switch {
+			case strings.Contains(lower, "[error]") || isStderr:
+				logger.Error("[Maven] %s", trimmed)
+			case strings.Contains(lower, "[warning]") || strings.Contains(lower, "[warn]"):
+				logger.Warn("[Maven] %s", trimmed)
+			default:
+				logger.Info("[Maven] %s", trimmed)
+			}
+		}
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() { defer wg.Done(); readLines(stdoutPipe, false) }()
+	go func() { defer wg.Done(); readLines(stderrPipe, true) }()
+	wg.Wait()
+
+	if err := cmd.Wait(); err != nil {
 		logger.Error("Maven 构建失败: %v", err)
 		s.updateStepStatus("Maven 打包", entity.StepStatusFailed, fmt.Sprintf("Maven 构建失败: %v", err))
-		result.ErrorMessage = fmt.Sprintf("Maven 构建失败: %v\n%s", err, logContent)
-		result.LogLines = s.parseLogLines(logContent)
+		result.ErrorMessage = fmt.Sprintf("Maven 构建失败: %v", err)
+		result.LogLines = allLines
 		return result, err
 	}
 
-	logContent := stdout.String() + "\n" + stderr.String()
-	result.LogLines = s.parseLogLines(logContent)
-	logger.Debug("Maven 输出日志:\n%s", logContent)
+	result.LogLines = allLines
 
 	builtFiles, err := s.findBuiltJars(cfg.ProjectRoot, result.LogLines)
 	if err != nil {
@@ -157,6 +200,17 @@ func (s *MavenBuildService) buildMavenCommand(cfg *MavenBuildConfig) (*exec.Cmd,
 		}
 	}
 
+	javaHome := strings.TrimSpace(cfg.JavaHome)
+	if javaHome == "" {
+		javaHome = strings.TrimSpace(os.Getenv("JAVA_HOME"))
+	}
+	if javaHome == "" {
+		return nil, fmt.Errorf("未配置 JDK 路径")
+	}
+	if !isValidJDKPath(javaHome) {
+		return nil, fmt.Errorf("JDK 路径不存在或无效: %s", javaHome)
+	}
+
 	args := []string{}
 
 	if cfg.UseFPom {
@@ -195,11 +249,19 @@ func (s *MavenBuildService) buildMavenCommand(cfg *MavenBuildConfig) (*exec.Cmd,
 	cmd := exec.CommandContext(s.ctx, mavenCmd, args...)
 	cmd.Dir = cfg.ProjectRoot
 
-	if cfg.JavaHome != "" {
-		env := os.Environ()
-		env = append(env, fmt.Sprintf("JAVA_HOME=%s", cfg.JavaHome))
-		cmd.Env = env
+	// Windows 下隐藏控制台窗口，防止弹出 cmd 窗口被用户误关导致进程终止
+	if runtime.GOOS == "windows" {
+		cmd.SysProcAttr = &syscall.SysProcAttr{
+			CreationFlags: 0x08000000, // CREATE_NO_WINDOW
+			HideWindow:    true,
+		}
 	}
+
+	env := os.Environ()
+	env = append(env, fmt.Sprintf("JAVA_HOME=%s", javaHome))
+	javaBin := filepath.Join(javaHome, "bin")
+	env = prependPath(env, javaBin)
+	cmd.Env = env
 
 	return cmd, nil
 }
@@ -220,6 +282,36 @@ func (s *MavenBuildService) findMavenExecutable() string {
 	}
 
 	return ""
+}
+
+func isValidJDKPath(javaHome string) bool {
+	if runtime.GOOS == "windows" {
+		javaCmd := filepath.Join(javaHome, "bin", "java.exe")
+		javacCmd := filepath.Join(javaHome, "bin", "javac.exe")
+		return fileExists(javaCmd) || fileExists(javacCmd)
+	}
+	javaCmd := filepath.Join(javaHome, "bin", "java")
+	javacCmd := filepath.Join(javaHome, "bin", "javac")
+	return fileExists(javaCmd) || fileExists(javacCmd)
+}
+
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
+}
+
+func prependPath(env []string, value string) []string {
+	if value == "" {
+		return env
+	}
+	sep := string(os.PathListSeparator)
+	for i, kv := range env {
+		if strings.HasPrefix(strings.ToUpper(kv), "PATH=") {
+			env[i] = "PATH=" + value + sep + strings.TrimPrefix(kv, "PATH=")
+			return env
+		}
+	}
+	return append(env, "PATH="+value)
 }
 
 func (s *MavenBuildService) findBuiltJars(projectRoot string, logLines []string) ([]string, error) {

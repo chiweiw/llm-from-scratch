@@ -19,18 +19,21 @@ onMounted(async () => {
   }
 });
 
-useWailsEvent("jdk-detection-result", (jdks: { path: string; source: string }[] | null) => {
-  const safeJdks = Array.isArray(jdks) ? jdks : [];
-  console.log("Received JDK detection result:", safeJdks);
-  detectingJdk.value = false;
-  detectedJdks.value = safeJdks;
-  if (safeJdks.length > 0) {
-    settingsStore.systemDefaults.jdkPath = safeJdks[0].path;
-    successMsg.value = "检测到 " + safeJdks.length + " 个 JDK";
-  } else {
-    errorMsg.value = "未检测到 JDK，请手动配置";
+useWailsEvent(
+  "jdk-detection-result",
+  (jdks: { path: string; source: string }[] | null) => {
+    const safeJdks = Array.isArray(jdks) ? jdks : [];
+    console.log("Received JDK detection result:", safeJdks);
+    detectingJdk.value = false;
+    detectedJdks.value = safeJdks;
+    if (safeJdks.length > 0) {
+      settingsStore.systemDefaults.jdkPath = safeJdks[0].path;
+      successMsg.value = "检测到 " + safeJdks.length + " 个 JDK";
+    } else {
+      errorMsg.value = "未检测到 JDK，请手动配置";
+    }
   }
-});
+);
 
 async function saveSettings() {
   try {
@@ -45,6 +48,7 @@ function resetToDefaults() {
     defaultTimeout: 0,
     logRetentionDays: 0,
     backupEnabled: false,
+    backupCleanup: true,
     notifyOnComplete: false,
     cloudDeploy: false,
     theme: "",
@@ -250,30 +254,56 @@ function selectJdk(jdk: { path: string; source: string }) {
                 />
               </div>
             </div>
-            <label class="flex items-center gap-2">
-              <input
-                type="checkbox"
-                v-model="settingsStore.globalSettings.backupEnabled"
-                class="rounded"
-              />
-              <span class="text-sm">部署前自动备份</span>
-            </label>
-            <label class="flex items-center gap-2">
-              <input
-                type="checkbox"
-                v-model="settingsStore.globalSettings.cloudDeploy"
-                class="rounded"
-              />
-              <span class="text-sm">云端部署（默认）</span>
-            </label>
-            <label class="flex items-center gap-2">
-              <input
-                type="checkbox"
-                v-model="settingsStore.globalSettings.notifyOnComplete"
-                class="rounded"
-              />
-              <span class="text-sm">部署完成后发送通知</span>
-            </label>
+            <!-- 部署前自动备份 Toggle -->
+            <div class="flex items-center justify-between rounded-md border border-gray-200 p-3">
+              <div>
+                <div class="text-sm font-medium">部署前自动备份</div>
+              </div>
+              <label class="relative inline-flex cursor-pointer items-center">
+                <input
+                  type="checkbox"
+                  class="peer sr-only"
+                  v-model="settingsStore.globalSettings.backupEnabled"
+                />
+                <div
+                  class="h-6 w-11 rounded-full bg-gray-200 peer-checked:bg-blue-500 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-5"
+                ></div>
+              </label>
+            </div>
+
+            <!-- 云端部署（默认） Toggle -->
+            <div class="flex items-center justify-between rounded-md border border-gray-200 p-3">
+              <div>
+                <div class="text-sm font-medium">云端部署（默认）</div>
+              </div>
+              <label class="relative inline-flex cursor-pointer items-center">
+                <input
+                  type="checkbox"
+                  class="peer sr-only"
+                  v-model="settingsStore.globalSettings.cloudDeploy"
+                />
+                <div
+                  class="h-6 w-11 rounded-full bg-gray-200 peer-checked:bg-blue-500 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-5"
+                ></div>
+              </label>
+            </div>
+
+            <!-- 部署完成后发送通知 Toggle -->
+            <div class="flex items-center justify-between rounded-md border border-gray-200 p-3">
+              <div>
+                <div class="text-sm font-medium">部署完成后发送通知</div>
+              </div>
+              <label class="relative inline-flex cursor-pointer items-center">
+                <input
+                  type="checkbox"
+                  class="peer sr-only"
+                  v-model="settingsStore.globalSettings.notifyOnComplete"
+                />
+                <div
+                  class="h-6 w-11 rounded-full bg-gray-200 peer-checked:bg-blue-500 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-5"
+                ></div>
+              </label>
+            </div>
           </div>
         </div>
 

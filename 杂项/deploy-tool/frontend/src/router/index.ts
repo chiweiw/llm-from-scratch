@@ -13,7 +13,7 @@ const router = createRouter({
       path: "/deploy",
       name: "deploy",
       component: () => import("../views/DeployView.vue"),
-      meta: { title: "部署中心" },
+      meta: { title: "部署中心", keepAlive: true },
     },
     {
       path: "/history",

@@ -3,7 +3,7 @@ import { ref, onMounted, onUnmounted, nextTick, watch } from "vue";
 import { useEnvironmentStore } from "@/stores/environment";
 import { useDeployStore } from "@/stores/deploy";
 import { useWailsEvent } from "@/lib/useWailsEvent";
-import type { CheckResult } from "@/types";
+import type { CheckResult, CheckItem } from "@/types";
 
 const envStore = useEnvironmentStore();
 const deployStore = useDeployStore();
@@ -13,7 +13,7 @@ const errorMessage = ref("");
 const showSuccess = ref(false);
 const logs = ref<Array<{ level: string; message: string; time: string }>>([]);
 const logContainer = ref<HTMLElement | null>(null);
-let progressInterval: number | null = null;
+let progressInterval: number | undefined;
 const precheckStatus = ref<"idle" | "running" | "success" | "failed">("idle");
 const precheckResult = ref<CheckResult | null>(null);
 
@@ -21,8 +21,14 @@ onMounted(async () => {
   await envStore.fetchEnvironments();
 });
 
-function handleLog(data: { level: string; message: string; ts?: string; line?: string }) {
-  const timeStr = data.ts || new Date().toLocaleTimeString("zh-CN", { hour12: false });
+function handleLog(data: {
+  level: string;
+  message: string;
+  ts?: string;
+  line?: string;
+}) {
+  const timeStr =
+    data.ts || new Date().toLocaleTimeString("zh-CN", { hour12: false });
   logs.value.push({
     level: data.level,
     message: data.line || data.message,
@@ -104,7 +110,8 @@ async function startDeploy() {
     }
     precheckStatus.value = "success";
     const warnCount =
-      result.checks?.filter((c) => c.status === "warning").length || 0;
+      result.checks?.filter((c: CheckItem) => c.status === "warning").length ||
+      0;
     if (warnCount > 0) {
       logs.value.push({
         level: "WARN",
@@ -124,21 +131,24 @@ async function startDeploy() {
 
       if (deployStore.progress && deployStore.progress.status === "success") {
         showSuccess.value = true;
-        clearInterval(progressInterval);
-        progressInterval = null;
+        if (progressInterval !== undefined) {
+          clearInterval(progressInterval);
+          progressInterval = undefined;
+        }
       }
     }, 500);
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : "启动部署失败";
+    errorMessage.value =
+      error instanceof Error ? error.message : "启动部署失败";
     console.error("部署启动失败:", error);
   }
 }
 
 function cancelDeploy() {
   deployStore.cancelDeploy();
-  if (progressInterval !== null) {
+  if (progressInterval !== undefined) {
     clearInterval(progressInterval);
-    progressInterval = null;
+    progressInterval = undefined;
   }
   showSuccess.value = false;
 }
@@ -148,11 +158,17 @@ function cancelDeploy() {
   <div class="h-full p-6">
     <h1 class="text-2xl font-bold mb-6">部署中心</h1>
 
-    <div v-if="errorMessage" class="mb-4 rounded-md border border-red-200 bg-red-50 p-4 text-red-800">
+    <div
+      v-if="errorMessage"
+      class="mb-4 rounded-md border border-red-200 bg-red-50 p-4 text-red-800"
+    >
       {{ errorMessage }}
     </div>
 
-    <div v-if="showSuccess" class="mb-4 rounded-md border border-green-200 bg-green-50 p-4 text-green-800">
+    <div
+      v-if="showSuccess"
+      class="mb-4 rounded-md border border-green-200 bg-green-50 p-4 text-green-800"
+    >
       部署成功！
     </div>
 
@@ -239,7 +255,10 @@ function cancelDeploy() {
           </div>
         </div>
 
-        <div v-if="deployStore.progress.errorMessage" class="mt-4 rounded-md border border-red-200 bg-red-50 p-4 text-red-800">
+        <div
+          v-if="deployStore.progress.errorMessage"
+          class="mt-4 rounded-md border border-red-200 bg-red-50 p-4 text-red-800"
+        >
           <div class="font-medium">错误信息</div>
           <div class="text-sm">{{ deployStore.progress.errorMessage }}</div>
         </div>
@@ -251,7 +270,8 @@ function cancelDeploy() {
               <div
                 class="w-6 h-6 rounded-full flex items-center justify-center text-xs"
                 :class="{
-                  'bg-primary text-primary-foreground': precheckStatus === 'running',
+                  'bg-primary text-primary-foreground':
+                    precheckStatus === 'running',
                   'bg-green-500 text-white': precheckStatus === 'success',
                   'bg-red-500 text-white': precheckStatus === 'failed',
                 }"
@@ -266,10 +286,16 @@ function cancelDeploy() {
               </div>
               <div class="flex-1">
                 <div class="font-medium">环境检查</div>
-                <div v-if="precheckStatus === 'running'" class="text-sm text-muted-foreground">
+                <div
+                  v-if="precheckStatus === 'running'"
+                  class="text-sm text-muted-foreground"
+                >
                   正在进行环境检查...
                 </div>
-                <div v-else-if="precheckStatus === 'failed'" class="text-sm text-red-700">
+                <div
+                  v-else-if="precheckStatus === 'failed'"
+                  class="text-sm text-red-700"
+                >
                   环境检查未通过
                 </div>
                 <div
@@ -277,13 +303,32 @@ function cancelDeploy() {
                   class="text-sm text-green-700"
                 >
                   检查通过
-                  <template v-if="(precheckResult?.checks?.filter(c => c.status === 'warning').length || 0) > 0">
-                    （存在 {{ precheckResult?.checks?.filter(c => c.status === 'warning').length }} 条警告，将继续部署）
+                  <template
+                    v-if="
+                      (precheckResult?.checks?.filter(
+                        (c) => c.status === 'warning'
+                      ).length || 0) > 0
+                    "
+                  >
+                    （存在
+                    {{
+                      precheckResult?.checks?.filter(
+                        (c) => c.status === "warning"
+                      ).length
+                    }}
+                    条警告，将继续部署）
                   </template>
                 </div>
               </div>
             </div>
-            <div v-if="precheckResult && precheckResult.checks && precheckResult.checks.length" class="mt-2 space-y-2">
+            <div
+              v-if="
+                precheckResult &&
+                precheckResult.checks &&
+                precheckResult.checks.length
+              "
+              class="mt-2 space-y-2"
+            >
               <div
                 v-for="(item, idx) in precheckResult.checks"
                 :key="idx"
@@ -294,20 +339,33 @@ function cancelDeploy() {
                   'border-green-200 bg-green-50': item.status === 'pass',
                 }"
               >
-                <span v-if="item.status === 'pass'" class="mt-0.5 text-green-600">✓</span>
-                <span v-else-if="item.status === 'error'" class="mt-0.5 text-red-600">✗</span>
+                <span
+                  v-if="item.status === 'pass'"
+                  class="mt-0.5 text-green-600"
+                  >✓</span
+                >
+                <span
+                  v-else-if="item.status === 'error'"
+                  class="mt-0.5 text-red-600"
+                  >✗</span
+                >
                 <span v-else class="mt-0.5 text-yellow-600">⚠</span>
                 <div class="flex-1">
                   <div class="font-medium">{{ item.name }}</div>
                   <div
                     v-if="item.message"
-                    :class="item.status === 'error' ? 'text-red-700' : 'text-gray-700'"
+                    :class="
+                      item.status === 'error' ? 'text-red-700' : 'text-gray-700'
+                    "
                   >
                     {{ item.message }}
                   </div>
                 </div>
               </div>
-              <div v-if="precheckStatus === 'failed'" class="mt-3 rounded border border-red-300 bg-red-100 p-3 text-red-800">
+              <div
+                v-if="precheckStatus === 'failed'"
+                class="mt-3 rounded border border-red-300 bg-red-100 p-3 text-red-800"
+              >
                 请根据以上错误信息修改配置后重新自检
               </div>
             </div>

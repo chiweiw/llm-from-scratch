@@ -388,48 +388,38 @@ async function checkCurrentEnvironment() {
               placeholder="D:\\javaproject\\backcode"
             />
           </div>
-          <div class="flex items-center gap-4">
-            <label class="flex items-center gap-2">
-              <input
-                type="checkbox"
-                v-model="editingEnv.cloudDeploy"
-                class="rounded"
-              />
-              <span class="text-sm font-medium">云端部署</span>
-            </label>
-            <span class="text-xs text-gray-500"
-              >（启用后将支持打包后上传服务器和远程重启）</span
-            >
-          </div>
-          <div>
-            <label class="block text-sm font-medium">超时时间 (秒)</label>
-            <input
-              v-model.number="editingEnv.timeout"
-              type="number"
-              class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
-              placeholder="600"
-            />
-          </div>
-          <div
-            class="flex items-center justify-between rounded-md border border-gray-200 p-3"
-          >
-            <div>
-              <div class="text-sm font-medium">部署前清理旧备份</div>
-              <div class="text-xs text-gray-500">
-                清理历史备份文件，避免占用空间
+          <div class="grid grid-cols-2 gap-4">
+            <!-- 云端部署 Toggle -->
+            <div class="flex items-center justify-between rounded-md border border-gray-200 p-3">
+              <div>
+                <div class="text-sm font-medium">云端部署</div>
+                <div class="text-xs text-gray-500">启用后将支持打包后上传服务器和远程重启</div>
               </div>
+              <label class="relative inline-flex cursor-pointer items-center">
+                <input
+                  type="checkbox"
+                  class="peer sr-only"
+                  v-model="editingEnv.cloudDeploy"
+                />
+                <div
+                  class="h-6 w-11 rounded-full bg-gray-200 peer-checked:bg-blue-500 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-5"
+                ></div>
+              </label>
             </div>
-            <label class="relative inline-flex cursor-pointer items-center">
+
+            <!-- 超时时间 Input -->
+            <div class="flex flex-col justify-center rounded-md border border-gray-200 p-3">
+              <label class="block text-sm font-medium">超时时间 (秒)</label>
               <input
-                type="checkbox"
-                class="peer sr-only"
-                v-model="editingEnv.backupCleanup"
+                v-model.number="editingEnv.timeout"
+                type="number"
+                class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm"
+                placeholder="600"
               />
-              <div
-                class="h-6 w-11 rounded-full bg-gray-200 peer-checked:bg-blue-500 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-5"
-              ></div>
-            </label>
+            </div>
           </div>
+
+          <!-- 部署前清理旧备份 配置已移除，改用系统全局配置 -->
         </div>
 
         <div v-show="activeTab === 'servers'" class="space-y-4">
@@ -535,7 +525,9 @@ async function checkCurrentEnvironment() {
                       部署后自动执行重启脚本
                     </div>
                   </div>
-                  <label class="relative inline-flex cursor-pointer items-center">
+                  <label
+                    class="relative inline-flex cursor-pointer items-center"
+                  >
                     <input
                       type="checkbox"
                       class="peer sr-only"
@@ -555,7 +547,9 @@ async function checkCurrentEnvironment() {
                       使用 sudo 权限执行命令
                     </div>
                   </div>
-                  <label class="relative inline-flex cursor-pointer items-center">
+                  <label
+                    class="relative inline-flex cursor-pointer items-center"
+                  >
                     <input
                       type="checkbox"
                       class="peer sr-only"

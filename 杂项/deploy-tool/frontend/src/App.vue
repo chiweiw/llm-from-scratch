@@ -94,7 +94,11 @@ const navItems = [
       </header>
 
       <div class="flex-1 overflow-auto">
-        <router-view />
+        <router-view v-slot="{ Component }">
+          <keep-alive>
+            <component :is="Component" />
+          </keep-alive>
+        </router-view>
       </div>
     </main>
   </div>

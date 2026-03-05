@@ -90,29 +90,8 @@ func CheckLocalConfig(env *entity.Environment, defaults entity.SystemDefaultConf
 		})
 	}
 
-	jdkPath := strings.TrimSpace(defaults.JdkPath)
 	mavenPath := strings.TrimSpace(defaults.MavenPath)
 	mavenSettingsPath := strings.TrimSpace(defaults.MavenSettingsPath)
-
-	if jdkPath == "" {
-		checks = append(checks, entity.CheckItem{
-			Name:    "JDK 路径",
-			Status:  entity.CheckStatusWarning,
-			Message: "未配置 JDK 路径（建议配置以避免问题）",
-		})
-	} else if !checkPathExists(jdkPath) {
-		checks = append(checks, entity.CheckItem{
-			Name:    "JDK 路径",
-			Status:  entity.CheckStatusWarning,
-			Message: "JDK 路径不存在: " + jdkPath,
-		})
-	} else {
-		checks = append(checks, entity.CheckItem{
-			Name:    "JDK 路径",
-			Status:  entity.CheckStatusPass,
-			Message: jdkPath,
-		})
-	}
 
 	if mavenPath != "" {
 		if !checkPathExists(mavenPath) {

@@ -78,6 +78,28 @@ export namespace entity {
 	        this.errorMessage = source["errorMessage"];
 	    }
 	}
+	export class DeployLog {
+	    id: string;
+	    deployId: string;
+	    level: string;
+	    message: string;
+	    timestamp: number;
+	    createdAt: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new DeployLog(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.deployId = source["deployId"];
+	        this.level = source["level"];
+	        this.message = source["message"];
+	        this.timestamp = source["timestamp"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
 	export class StepProgress {
 	    name: string;
 	    status: string;
@@ -202,7 +224,6 @@ export namespace entity {
 	    projectRoot: string;
 	    cloudDeploy: boolean;
 	    timeout: number;
-	    backupCleanup: boolean;
 	    servers: ServerConfig[];
 	    targetFiles: TargetFile[];
 	    checkStatus: string;
@@ -222,7 +243,6 @@ export namespace entity {
 	        this.projectRoot = source["projectRoot"];
 	        this.cloudDeploy = source["cloudDeploy"];
 	        this.timeout = source["timeout"];
-	        this.backupCleanup = source["backupCleanup"];
 	        this.servers = this.convertValues(source["servers"], ServerConfig);
 	        this.targetFiles = this.convertValues(source["targetFiles"], TargetFile);
 	        this.checkStatus = source["checkStatus"];
@@ -252,6 +272,7 @@ export namespace entity {
 	    defaultTimeout: number;
 	    logRetentionDays: number;
 	    backupEnabled: boolean;
+	    backupCleanup: boolean;
 	    notifyOnComplete: boolean;
 	    cloudDeploy: boolean;
 	    theme: string;
@@ -266,6 +287,7 @@ export namespace entity {
 	        this.defaultTimeout = source["defaultTimeout"];
 	        this.logRetentionDays = source["logRetentionDays"];
 	        this.backupEnabled = source["backupEnabled"];
+	        this.backupCleanup = source["backupCleanup"];
 	        this.notifyOnComplete = source["notifyOnComplete"];
 	        this.cloudDeploy = source["cloudDeploy"];
 	        this.theme = source["theme"];
@@ -632,6 +654,40 @@ export namespace response {
 	        this.code = source["code"];
 	        this.message = source["message"];
 	        this.data = this.convertValues(source["data"], entity.DeployHistory);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class Data___deploy_tool_internal_model_entity_DeployLog_ {
+	    code: number;
+	    message: string;
+	    data: entity.DeployLog[];
+	
+	    static createFrom(source: any = {}) {
+	        return new Data___deploy_tool_internal_model_entity_DeployLog_(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.code = source["code"];
+	        this.message = source["message"];
+	        this.data = this.convertValues(source["data"], entity.DeployLog);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

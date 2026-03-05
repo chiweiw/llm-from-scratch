@@ -4,6 +4,7 @@ import (
 	filecfg "deploy-tool/internal/config"
 	"deploy-tool/internal/dao"
 	"deploy-tool/internal/db"
+	"deploy-tool/internal/logger"
 	"deploy-tool/internal/model/entity"
 	"deploy-tool/internal/utils"
 	"encoding/json"
@@ -67,21 +68,41 @@ func (s *ConfigService) Load() {
 	s.mu.Unlock()
 
 	if needDefault {
+		logger.Info("DB environments array is empty, attempting to load from default configure JSON...")
 		if !s.tryImportFromJSON() {
+			logger.Info("Failed to import from JSON, creating default Dev environment")
 			s.createDefaultEnvironment()
+		} else {
+			logger.Info("Successfully initialized DB environments from configure JSON")
 		}
 	}
 }
 
 func (s *ConfigService) tryImportFromJSON() bool {
+	logger.Info("Attempting to load configuration from deploy-tool-config.json...")
 	fdao := dao.NewFileConfigDAO(filecfg.Default())
 	cfgFromFile, err := fdao.Load()
-	if err != nil || cfgFromFile == nil {
+	if err != nil {
+		logger.Error("Failed to load JSON file: %v", err)
+		return false
+	}
+	if cfgFromFile == nil {
+		logger.Warn("JSON file returned nil config")
 		return false
 	}
 
-	_ = s.SaveSettings(cfgFromFile.Settings)
-	_ = s.SaveSystemDefaults(cfgFromFile.SystemDefaults)
+	logger.Info("Parsed JSON configuration successfully. Found %d environments.", len(cfgFromFile.Environments))
+
+	if err := s.SaveSettings(cfgFromFile.Settings); err != nil {
+		logger.Error("保存全局设置失败: %v", err)
+	} else {
+		logger.Info("全局设置已写入数据库")
+	}
+	if err := s.SaveSystemDefaults(cfgFromFile.SystemDefaults); err != nil {
+		logger.Error("保存系统默认值失败: %v", err)
+	} else {
+		logger.Info("系统默认值已写入数据库")
+	}
 
 	imported := 0
 	for _, env := range cfgFromFile.Environments {
@@ -91,8 +112,24 @@ func (s *ConfigService) tryImportFromJSON() bool {
 		if env.TargetFiles == nil {
 			env.TargetFiles = []entity.TargetFile{}
 		}
+		logger.Info(
+			"准备导入环境: %s (%s) servers=%d targetFiles=%d",
+			env.Name,
+			env.ID,
+			len(env.Servers),
+			len(env.TargetFiles),
+		)
+		if len(env.Servers) == 0 {
+			logger.Warn("环境 %s 服务器配置为空", env.Name)
+		}
+		if len(env.TargetFiles) == 0 {
+			logger.Warn("环境 %s 目标文件配置为空", env.Name)
+		}
 		if err := s.UpsertEnvironment(env); err == nil {
+			logger.Info("Successfully imported environment: %s (%s)", env.Name, env.ID)
 			imported++
+		} else {
+			logger.Error("Failed to upsert environment %s into DB: %v", env.ID, err)
 		}
 	}
 	return imported > 0
@@ -196,17 +233,16 @@ func (s *ConfigService) UpsertEnvironment(env entity.Environment) error {
 	env.UpdatedAt = now
 
 	dbEnv := &db.Environment{
-		ID:            env.ID,
-		Name:          env.Name,
-		Identifier:    env.Identifier,
-		Description:   env.Description,
-		ProjectRoot:   env.ProjectRoot,
-		CloudDeploy:   env.CloudDeploy,
-		Timeout:       env.Timeout,
-		BackupCleanup: env.BackupCleanup,
-		CheckStatus:   env.CheckStatus,
-		CreatedAt:     env.CreatedAt,
-		UpdatedAt:     env.UpdatedAt,
+		ID:          env.ID,
+		Name:        env.Name,
+		Identifier:  env.Identifier,
+		Description: env.Description,
+		ProjectRoot: env.ProjectRoot,
+		CloudDeploy: env.CloudDeploy,
+		Timeout:     env.Timeout,
+		CheckStatus: env.CheckStatus,
+		CreatedAt:   env.CreatedAt,
+		UpdatedAt:   env.UpdatedAt,
 	}
 
 	if env.ID == "" {
@@ -407,17 +443,16 @@ func (s *ConfigService) loadEnvironments() []entity.Environment {
 	envs := make([]entity.Environment, 0, len(dbEnvs))
 	for _, dbEnv := range dbEnvs {
 		env := entity.Environment{
-			ID:            dbEnv.ID,
-			Name:          dbEnv.Name,
-			Identifier:    dbEnv.Identifier,
-			Description:   dbEnv.Description,
-			ProjectRoot:   dbEnv.ProjectRoot,
-			CloudDeploy:   dbEnv.CloudDeploy,
-			Timeout:       dbEnv.Timeout,
-			BackupCleanup: dbEnv.BackupCleanup,
-			CheckStatus:   dbEnv.CheckStatus,
-			CreatedAt:     dbEnv.CreatedAt,
-			UpdatedAt:     dbEnv.UpdatedAt,
+			ID:          dbEnv.ID,
+			Name:        dbEnv.Name,
+			Identifier:  dbEnv.Identifier,
+			Description: dbEnv.Description,
+			ProjectRoot: dbEnv.ProjectRoot,
+			CloudDeploy: dbEnv.CloudDeploy,
+			Timeout:     dbEnv.Timeout,
+			CheckStatus: dbEnv.CheckStatus,
+			CreatedAt:   dbEnv.CreatedAt,
+			UpdatedAt:   dbEnv.UpdatedAt,
 		}
 
 		servers, _ := s.serverConfigDAO.GetByEnvironmentID(dbEnv.ID)
@@ -455,19 +490,18 @@ func (s *ConfigService) loadEnvironments() []entity.Environment {
 func (s *ConfigService) createDefaultEnvironment() {
 	now := time.Now().Unix()
 	env := entity.Environment{
-		ID:            "env_dev",
-		Name:          "开发环境",
-		Identifier:    "dev",
-		Description:   "本地开发环境 - deploy_tool.py 配置",
-		ProjectRoot:   `D:\javaproject\backcode`,
-		CloudDeploy:   true,
-		Timeout:       600,
-		BackupCleanup: true,
-		Servers:       []entity.ServerConfig{},
-		TargetFiles:   []entity.TargetFile{},
-		CheckStatus:   "unchecked",
-		CreatedAt:     now,
-		UpdatedAt:     now,
+		ID:          "env_dev",
+		Name:        "开发环境",
+		Identifier:  "dev",
+		Description: "本地开发环境 - deploy_tool.py 配置",
+		ProjectRoot: `D:\javaproject\backcode`,
+		CloudDeploy: true,
+		Timeout:     600,
+		Servers:     []entity.ServerConfig{},
+		TargetFiles: []entity.TargetFile{},
+		CheckStatus: "unchecked",
+		CreatedAt:   now,
+		UpdatedAt:   now,
 	}
 	_ = s.UpsertEnvironment(env)
 }

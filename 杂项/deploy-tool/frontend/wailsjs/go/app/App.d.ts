@@ -16,6 +16,8 @@ export function GetAutoDetectJDK():Promise<response.Data___map_string_string_>;
 
 export function GetDeployHistory():Promise<response.Data___deploy_tool_internal_model_entity_DeployHistory_>;
 
+export function GetDeployLogs(arg1:string):Promise<response.Data___deploy_tool_internal_model_entity_DeployLog_>;
+
 export function GetDeployProgress():Promise<response.Data_deploy_tool_internal_model_entity_DeployProgress_>;
 
 export function GetEnvironment(arg1:string):Promise<response.Data_deploy_tool_internal_model_entity_Environment_>;

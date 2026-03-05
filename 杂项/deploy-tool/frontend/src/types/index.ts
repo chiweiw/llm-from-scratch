@@ -6,7 +6,6 @@ export interface Environment {
   projectRoot: string;
   cloudDeploy: boolean;
   timeout: number;
-  backupCleanup: boolean;
   servers: ServerConfig[];
   targetFiles: TargetFile[];
   checkStatus: string;
@@ -38,6 +37,7 @@ export interface GlobalSettings {
   defaultTimeout: number;
   logRetentionDays: number;
   backupEnabled: boolean;
+  backupCleanup: boolean;
   notifyOnComplete: boolean;
   cloudDeploy: boolean;
   theme: string;
@@ -62,6 +62,15 @@ export interface DeployHistory {
   files: string[];
   duration: number;
   errorMessage: string;
+}
+
+export interface DeployLog {
+  id: string;
+  deployId: string;
+  level: string;
+  message: string;
+  timestamp: number;
+  createdAt: number;
 }
 
 export interface DeployProgress {

@@ -5,6 +5,7 @@ import type {
   ServerConfig,
   TargetFile,
   CheckResult,
+  CheckItem,
 } from "../types";
 
 export const useEnvironmentStore = defineStore("environment", () => {
@@ -41,7 +42,7 @@ export const useEnvironmentStore = defineStore("environment", () => {
     saving.value = true;
     try {
       const { SaveEnvironment } = await import("../../wailsjs/go/app/App");
-      const resp = await SaveEnvironment({ environment: env });
+      const resp = await SaveEnvironment({ environment: env } as any);
       if (resp.code !== 0) {
         throw new Error(resp.message || "保存失败");
       }
@@ -84,7 +85,9 @@ export const useEnvironmentStore = defineStore("environment", () => {
       const envIndex = environments.value.findIndex((e) => e.id === id);
       if (envIndex !== -1) {
         if (result.success) {
-          const hasWarning = result.checks.some((c) => c.status === "warning");
+          const hasWarning = result.checks.some(
+            (c: CheckItem) => c.status === "warning"
+          );
           environments.value[envIndex].checkStatus = hasWarning
             ? "warning"
             : "pass";
@@ -110,7 +113,6 @@ export const useEnvironmentStore = defineStore("environment", () => {
       projectRoot: "",
       cloudDeploy: true,
       timeout: 600,
-      backupCleanup: true,
       servers: [],
       targetFiles: [],
       checkStatus: "unchecked",

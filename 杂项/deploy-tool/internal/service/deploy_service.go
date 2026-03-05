@@ -3,22 +3,30 @@ package service
 import (
 	"context"
 	"fmt"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"deploy-tool/internal/logger"
 	"deploy-tool/internal/model/entity"
+	"deploy-tool/internal/utils"
 )
 
 type DeployService struct {
-	progress       *entity.DeployProgress
-	mavenBuild     *MavenBuildService
-	configService  *ConfigService
-	historyService *HistoryService
-	cancelFunc     context.CancelFunc
+	progress         *entity.DeployProgress
+	mavenBuild       *MavenBuildService
+	cfgService       *ConfigService
+	historyService   *HistoryService
+	cancelFunc       context.CancelFunc
+	currentHistoryID string
+	wailsCtx         context.Context
 }
 
-func NewDeployService() *DeployService {
+func NewDeployService(cfgService *ConfigService, historyService *HistoryService, wailsCtx context.Context) *DeployService {
 	return &DeployService{
+		cfgService:     cfgService,
+		historyService: historyService,
+		wailsCtx:       wailsCtx,
 		progress: &entity.DeployProgress{
 			Status: entity.DeployStatusIdle,
 		},
@@ -27,7 +35,7 @@ func NewDeployService() *DeployService {
 }
 
 func (s *DeployService) SetConfigService(cfg *ConfigService) {
-	s.configService = cfg
+	s.cfgService = cfg
 }
 
 func (s *DeployService) SetHistoryService(history *HistoryService) {
@@ -35,11 +43,11 @@ func (s *DeployService) SetHistoryService(history *HistoryService) {
 }
 
 func (s *DeployService) Start(envID string, jarIDs []string) error {
-	if s.configService == nil {
+	if s.cfgService == nil {
 		return fmt.Errorf("config service 未初始化")
 	}
 
-	env := s.configService.GetEnvironment(envID)
+	env := s.cfgService.GetEnvironment(envID)
 	if env == nil {
 		return fmt.Errorf("环境不存在: %s", envID)
 	}
@@ -74,8 +82,10 @@ func (s *DeployService) executeDeploy(ctx context.Context, env *entity.Environme
 	if s.historyService != nil {
 		historyID = s.historyService.Create(env.ID, env.Name)
 	}
+	s.currentHistoryID = historyID
 
 	defer func() {
+		s.currentHistoryID = ""
 		if r := recover(); r != nil {
 			logger.Error("部署任务异常: %v", r)
 			s.updateProgressStatus(entity.DeployStatusFailed, fmt.Sprintf("部署失败: %v", r))
@@ -128,34 +138,27 @@ func (s *DeployService) executeDeploy(ctx context.Context, env *entity.Environme
 	logger.Info("Maven 打包完成，构建产物: %v", buildResult.BuiltFiles)
 
 	if env.CloudDeploy {
-		logger.Info("开始上传文件到服务器...")
+		logger.Info("开始逐台服务器上传并重启...")
 		s.updateStepStatus("文件上传", entity.StepStatusRunning, "准备上传文件...")
-		if err := s.uploadFiles(ctx, env, buildResult.BuiltFiles, jarIDs); err != nil {
-			logger.Error("文件上传失败: %v", err)
-			s.updateStepStatus("文件上传", entity.StepStatusFailed, err.Error())
-			s.updateProgressStatus(entity.DeployStatusFailed, err.Error())
-			if s.historyService != nil && historyID != "" {
-				s.historyService.Update(historyID, "failed", "", 0, err.Error())
-			}
-			return
-		}
-		s.updateStepStatus("文件上传", entity.StepStatusSuccess, "文件上传完成")
-		logger.Info("文件上传完成")
-		s.updateProgress(80)
-
-		logger.Info("开始远程重启服务...")
 		s.updateStepStatus("远程重启", entity.StepStatusRunning, "准备执行重启脚本...")
-		if err := s.restartServices(ctx, env); err != nil {
-			logger.Error("远程重启失败: %v", err)
-			s.updateStepStatus("远程重启", entity.StepStatusFailed, err.Error())
+		if err := s.uploadAndRestartSequential(ctx, env, buildResult.BuiltFiles, jarIDs); err != nil {
+			logger.Error("上传/重启失败: %v", err)
+			// 哪个步骤失败就更新哪个步骤
+			if strings.Contains(err.Error(), "上传") {
+				s.updateStepStatus("文件上传", entity.StepStatusFailed, err.Error())
+			} else {
+				s.updateStepStatus("远程重启", entity.StepStatusFailed, err.Error())
+			}
 			s.updateProgressStatus(entity.DeployStatusFailed, err.Error())
 			if s.historyService != nil && historyID != "" {
 				s.historyService.Update(historyID, "failed", "", 0, err.Error())
 			}
 			return
 		}
-		s.updateStepStatus("远程重启", entity.StepStatusSuccess, "服务重启完成")
-		logger.Info("远程重启完成")
+		s.updateStepStatus("文件上传", entity.StepStatusSuccess, "所有服务器上传完成")
+		s.updateStepStatus("远程重启", entity.StepStatusSuccess, "所有服务器重启完成")
+		logger.Info("逐台上传并重启完成")
+		s.updateProgress(85)
 	} else {
 		logger.Info("云端部署未启用，跳过文件上传和远程重启")
 		s.updateStepStatus("文件上传", entity.StepStatusSkipped, "云端部署未启用")
@@ -182,10 +185,10 @@ func (s *DeployService) executeDeploy(ctx context.Context, env *entity.Environme
 }
 
 func (s *DeployService) checkEnvironment(env *entity.Environment) error {
-	if s.configService == nil {
+	if s.cfgService == nil {
 		return fmt.Errorf("config service 未初始化")
 	}
-	defaults := s.configService.GetSystemDefaults()
+	defaults := s.cfgService.GetSystemDefaults()
 	result := CheckEnvironment(env, defaults)
 	if result == nil {
 		return fmt.Errorf("环境检查失败：未知错误")
@@ -195,11 +198,23 @@ func (s *DeployService) checkEnvironment(env *entity.Environment) error {
 		for _, item := range result.Checks {
 			switch item.Status {
 			case entity.CheckStatusFail:
-				if item.Message != "" { logger.Error("%s - %s", item.Name, item.Message) } else { logger.Error("%s", item.Name) }
+				if item.Message != "" {
+					logger.Error("%s - %s", item.Name, item.Message)
+				} else {
+					logger.Error("%s", item.Name)
+				}
 			case entity.CheckStatusWarning:
-				if item.Message != "" { logger.Warn("%s - %s", item.Name, item.Message) } else { logger.Warn("%s", item.Name) }
+				if item.Message != "" {
+					logger.Warn("%s - %s", item.Name, item.Message)
+				} else {
+					logger.Warn("%s", item.Name)
+				}
 			default:
-				if item.Message != "" { logger.Info("%s - %s", item.Name, item.Message) } else { logger.Info("%s", item.Name) }
+				if item.Message != "" {
+					logger.Info("%s - %s", item.Name, item.Message)
+				} else {
+					logger.Info("%s", item.Name)
+				}
 			}
 		}
 		return fmt.Errorf("环境检查未通过")
@@ -207,21 +222,25 @@ func (s *DeployService) checkEnvironment(env *entity.Environment) error {
 	// 仅有警告情况下，记录警告后继续
 	for _, item := range result.Checks {
 		if item.Status == entity.CheckStatusWarning {
-			if item.Message != "" { logger.Warn("%s - %s", item.Name, item.Message) } else { logger.Warn("%s", item.Name) }
+			if item.Message != "" {
+				logger.Warn("%s - %s", item.Name, item.Message)
+			} else {
+				logger.Warn("%s", item.Name)
+			}
 		}
 	}
 	return nil
 }
 
 func (s *DeployService) buildMavenConfig(env *entity.Environment) *MavenBuildConfig {
-	defaults := s.configService.GetSystemDefaults()
+	defaults := s.cfgService.GetSystemDefaults()
 
 	cfg := &MavenBuildConfig{
 		ProjectRoot: env.ProjectRoot,
 		MavenPath:   defaults.MavenPath,
 		JavaHome:    defaults.JdkPath,
 		Offline:     true,
-		Quiet:       true,
+		Quiet:       false,
 		UseFPom:     true,
 	}
 
@@ -234,18 +253,236 @@ func (s *DeployService) buildMavenConfig(env *entity.Environment) *MavenBuildCon
 	}
 
 	if len(defaults.MavenArgs) > 0 {
-		cfg.Goals = defaults.MavenArgs
+		// 过滤掉已由专用字段（SettingsPath / RepoLocal）处理的参数，避免重复追加
+		var cleanGoals []string
+		skipNext := false
+		for _, arg := range defaults.MavenArgs {
+			if skipNext {
+				skipNext = false
+				continue
+			}
+			if arg == "-s" || arg == "--settings" {
+				skipNext = true // 跳过下一个参数（settings 文件路径）
+				continue
+			}
+			if strings.HasPrefix(arg, "-Dmaven.repo.local=") {
+				continue
+			}
+			cleanGoals = append(cleanGoals, arg)
+		}
+		cfg.Goals = cleanGoals
 	}
 
 	return cfg
 }
 
 func (s *DeployService) uploadFiles(ctx context.Context, env *entity.Environment, builtFiles []string, jarIDs []string) error {
-	return fmt.Errorf("文件上传功能待实现")
+	if len(env.Servers) == 0 {
+		return fmt.Errorf("未配置任何服务器")
+	}
+
+	targetMap := make(map[string]entity.TargetFile)
+	for _, t := range env.TargetFiles {
+		targetMap[t.ID] = t
+	}
+
+	var selectedTargets []entity.TargetFile
+	if len(jarIDs) == 0 {
+		for _, t := range env.TargetFiles {
+			if t.DefaultCheck {
+				selectedTargets = append(selectedTargets, t)
+			}
+		}
+	} else {
+		for _, id := range jarIDs {
+			if t, ok := targetMap[id]; ok {
+				selectedTargets = append(selectedTargets, t)
+			}
+		}
+	}
+
+	if len(selectedTargets) == 0 {
+		return fmt.Errorf("未选择任何要上传的文件")
+	}
+
+	logger.Info("准备上传 %d 个文件到 %d 台服务器", len(selectedTargets), len(env.Servers))
+
+	for _, server := range env.Servers {
+		logger.Info("连接服务器 %s (%s:%d)...", server.Name, server.Host, server.Port)
+
+		client, err := utils.NewSFTPClient(server.Host, server.Port, server.Username, server.Password)
+		if err != nil {
+			return fmt.Errorf("连接服务器 %s 失败: %v", server.Name, err)
+		}
+
+		for _, t := range selectedTargets {
+			localPath := t.LocalPath
+			if !filepath.IsAbs(localPath) {
+				localPath = filepath.Join(env.ProjectRoot, filepath.FromSlash(localPath))
+			}
+
+			remoteName := t.RemoteName
+			if strings.TrimSpace(remoteName) == "" {
+				remoteName = filepath.Base(localPath)
+			}
+
+			logger.Info("上传文件: %s -> %s:%s/%s", localPath, server.Host, server.DeployDir, remoteName)
+			s.progress.CurrentFile = localPath
+			s.progress.FileProgress = 0
+
+			// 备份远程旧文件
+			if err := client.BackupRemoteFile(server.DeployDir, remoteName, s.cfgService.GetSettings().BackupCleanup); err != nil {
+				client.Close()
+				return fmt.Errorf("服务器 %s 备份旧文件失败: %v", server.Name, err)
+			}
+
+			// 上传并上报进度
+			start := time.Now()
+			var lastReport time.Time
+			var lastBytes int64
+			onProgress := func(written, total int64) {
+				percent := 0
+				if total > 0 {
+					percent = int((written * 100) / total)
+				}
+				s.progress.FileProgress = percent
+				now := time.Now()
+				if lastReport.IsZero() || now.Sub(lastReport) > 500*time.Millisecond {
+					elapsed := now.Sub(start).Seconds()
+					if elapsed > 0 {
+						speed := float64(written) / 1024.0 / 1024.0 / elapsed
+						s.progress.Speed = fmt.Sprintf("%.2f MB/s", speed)
+					}
+					lastReport = now
+					lastBytes = written
+				} else {
+					_ = lastBytes
+				}
+			}
+
+			if err := client.UploadFileWithProgress(localPath, server.DeployDir, remoteName, onProgress); err != nil {
+				client.Close()
+				return fmt.Errorf("上传文件到服务器 %s 失败: %v", server.Name, err)
+			}
+
+			s.progress.FileProgress = 100
+		}
+
+		client.Close()
+	}
+
+	return nil
 }
 
-func (s *DeployService) restartServices(ctx context.Context, env *entity.Environment) error {
-	return fmt.Errorf("远程重启功能待实现")
+func (s *DeployService) uploadAndRestartSequential(ctx context.Context, env *entity.Environment, builtFiles []string, jarIDs []string) error {
+	if len(env.Servers) == 0 {
+		return fmt.Errorf("未配置任何服务器")
+	}
+
+	targetMap := make(map[string]entity.TargetFile)
+	for _, t := range env.TargetFiles {
+		targetMap[t.ID] = t
+	}
+	var selectedTargets []entity.TargetFile
+	if len(jarIDs) == 0 {
+		for _, t := range env.TargetFiles {
+			if t.DefaultCheck {
+				selectedTargets = append(selectedTargets, t)
+			}
+		}
+	} else {
+		for _, id := range jarIDs {
+			if t, ok := targetMap[id]; ok {
+				selectedTargets = append(selectedTargets, t)
+			}
+		}
+	}
+	if len(selectedTargets) == 0 {
+		return fmt.Errorf("未选择任何要上传的文件")
+	}
+
+	for idx, server := range env.Servers {
+		stagePrefix := fmt.Sprintf("[%d/%d] 服务器 %s", idx+1, len(env.Servers), server.Name)
+		logger.Info("%s: 连接中 (%s:%d)...", stagePrefix, server.Host, server.Port)
+		client, err := utils.NewSFTPClient(server.Host, server.Port, server.Username, server.Password)
+		if err != nil {
+			return fmt.Errorf("%s: 连接失败: %v", stagePrefix, err)
+		}
+
+		// 上传前备份并上传所有目标
+		for _, t := range selectedTargets {
+			localPath := t.LocalPath
+			if !filepath.IsAbs(localPath) {
+				localPath = filepath.Join(env.ProjectRoot, filepath.FromSlash(localPath))
+			}
+			remoteName := t.RemoteName
+			if strings.TrimSpace(remoteName) == "" {
+				remoteName = filepath.Base(localPath)
+			}
+			logger.Info("%s: 备份远程旧文件 %s", stagePrefix, remoteName)
+			if err := client.BackupRemoteFile(server.DeployDir, remoteName, s.cfgService.GetSettings().BackupCleanup); err != nil {
+				client.Close()
+				return fmt.Errorf("%s: 备份失败: %v", stagePrefix, err)
+			}
+
+			logger.Info("%s: 上传 %s -> %s:%s/%s", stagePrefix, localPath, server.Host, server.DeployDir, remoteName)
+			s.progress.CurrentFile = localPath
+			s.progress.FileProgress = 0
+			start := time.Now()
+			var lastReport time.Time
+			onProgress := func(written, total int64) {
+				percent := 0
+				if total > 0 {
+					percent = int((written * 100) / total)
+				}
+				s.progress.FileProgress = percent
+				now := time.Now()
+				if lastReport.IsZero() || now.Sub(lastReport) > 500*time.Millisecond {
+					elapsed := now.Sub(start).Seconds()
+					if elapsed > 0 {
+						speed := float64(written) / 1024.0 / 1024.0 / elapsed
+						s.progress.Speed = fmt.Sprintf("%.2f MB/s", speed)
+					}
+					lastReport = now
+				}
+			}
+			if err := client.UploadFileWithProgress(localPath, server.DeployDir, remoteName, onProgress); err != nil {
+				client.Close()
+				return fmt.Errorf("%s: 上传失败: %v", stagePrefix, err)
+			}
+			s.progress.FileProgress = 100
+		}
+
+		// 重启该服务器
+		if server.EnableRestart && strings.TrimSpace(server.RestartScript) != "" {
+			s.updateStepStatus("远程重启", entity.StepStatusRunning, fmt.Sprintf("%s: 执行重启脚本", stagePrefix))
+			cmd := server.RestartScript
+			if server.UseSudo {
+				cmd = "sudo " + cmd
+			}
+			output, err := client.RunCommand(cmd)
+			if err != nil {
+				client.Close()
+				return fmt.Errorf("%s: 重启失败: %v，输出: %s", stagePrefix, err, strings.TrimSpace(output))
+			}
+			if strings.TrimSpace(output) != "" {
+				logger.Info("%s: 重启输出: %s", stagePrefix, strings.TrimSpace(output))
+			}
+		} else {
+			logger.Info("%s: 未启用重启或未配置脚本，跳过", stagePrefix)
+		}
+
+		client.Close()
+	}
+
+	return nil
+}
+
+func (s *DeployService) TryAddHistoryLog(level, message string) {
+	if s.historyService == nil || s.currentHistoryID == "" {
+		return
+	}
+	_ = s.historyService.AddLog(s.currentHistoryID, level, message)
 }
 
 func (s *DeployService) Cancel() {

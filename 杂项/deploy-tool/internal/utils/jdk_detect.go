@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"syscall"
 )
 
 func AutoDetectJDK() []map[string]string {
@@ -108,7 +109,13 @@ func detectRegistryJDKPaths() []string {
 	}
 	var homes []string
 	for _, key := range regKeys {
-		out, err := exec.Command("reg", "query", key, "/s", "/v", "JavaHome").CombinedOutput()
+		regCmd := exec.Command("reg", "query", key, "/s", "/v", "JavaHome")
+		// Windows 下隐藏控制台窗口
+		regCmd.SysProcAttr = &syscall.SysProcAttr{
+			CreationFlags: 0x08000000, // CREATE_NO_WINDOW
+			HideWindow:    true,
+		}
+		out, err := regCmd.CombinedOutput()
 		if err != nil {
 			continue
 		}

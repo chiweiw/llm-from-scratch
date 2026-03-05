@@ -26,6 +26,10 @@ export function GetDeployHistory() {
   return window['go']['app']['App']['GetDeployHistory']();
 }
 
+export function GetDeployLogs(arg1) {
+  return window['go']['app']['App']['GetDeployLogs'](arg1);
+}
+
 export function GetDeployProgress() {
   return window['go']['app']['App']['GetDeployProgress']();
 }

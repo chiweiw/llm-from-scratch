@@ -21,3 +21,12 @@ type HistoryFilter struct {
 	PageSize      int    `json:"pageSize"`
 }
 
+type DeployLog struct {
+	ID        string `json:"id"`
+	DeployID  string `json:"deployId"`
+	Level     string `json:"level"`
+	Message   string `json:"message"`
+	Timestamp int64  `json:"timestamp"`
+	CreatedAt int64  `json:"createdAt"`
+}
+

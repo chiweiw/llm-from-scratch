@@ -1,19 +1,18 @@
 package entity
 
 type Environment struct {
-	ID            string         `json:"id"`
-	Name          string         `json:"name"`
-	Identifier    string         `json:"identifier"`
-	Description   string         `json:"description"`
-	ProjectRoot   string         `json:"projectRoot"`
-	CloudDeploy   bool           `json:"cloudDeploy"`
-	Timeout       int            `json:"timeout"`
-	BackupCleanup bool           `json:"backupCleanup"`
-	Servers       []ServerConfig `json:"servers"`
-	TargetFiles   []TargetFile   `json:"targetFiles"`
-	CheckStatus   string         `json:"checkStatus"`
-	CreatedAt     int64          `json:"createdAt"`
-	UpdatedAt     int64          `json:"updatedAt"`
+	ID          string         `json:"id"`
+	Name        string         `json:"name"`
+	Identifier  string         `json:"identifier"`
+	Description string         `json:"description"`
+	ProjectRoot string         `json:"projectRoot"`
+	CloudDeploy bool           `json:"cloudDeploy"`
+	Timeout     int            `json:"timeout"`
+	Servers     []ServerConfig `json:"servers"`
+	TargetFiles []TargetFile   `json:"targetFiles"`
+	CheckStatus string         `json:"checkStatus"`
+	CreatedAt   int64          `json:"createdAt"`
+	UpdatedAt   int64          `json:"updatedAt"`
 }
 
 type ServerConfig struct {
@@ -35,4 +34,3 @@ type TargetFile struct {
 	RemoteName   string `json:"remoteName"`
 	DefaultCheck bool   `json:"defaultCheck"`
 }
-

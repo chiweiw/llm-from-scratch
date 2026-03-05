@@ -43,6 +43,9 @@ func (a *App) Startup(ctx context.Context) {
 				"line":    line,
 			})
 		}
+		if a.deployService != nil {
+			a.deployService.TryAddHistoryLog(level, message)
+		}
 	})
 }
 
@@ -119,6 +122,28 @@ func (a *App) GetDeployHistory() response.Data[[]entity.DeployHistory] {
 		return response.FailData(err.Error(), []entity.DeployHistory{})
 	}
 	return response.OKData(histories)
+}
+
+func (a *App) GetDeployLogs(id string) response.Data[[]entity.DeployLog] {
+	if id == "" {
+		return response.FailData("id 不能为空", []entity.DeployLog{})
+	}
+	rows, err := a.history.GetLogs(id)
+	if err != nil {
+		return response.FailData(err.Error(), []entity.DeployLog{})
+	}
+	out := make([]entity.DeployLog, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, entity.DeployLog{
+			ID:        r.ID,
+			DeployID:  r.DeployID,
+			Level:     r.Level,
+			Message:   r.Message,
+			Timestamp: r.Timestamp,
+			CreatedAt: r.CreatedAt,
+		})
+	}
+	return response.OKData(out)
 }
 
 func (a *App) GetGlobalSettings() response.Data[entity.GlobalSettings] {

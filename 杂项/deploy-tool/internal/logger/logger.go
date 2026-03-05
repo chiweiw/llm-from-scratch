@@ -67,8 +67,7 @@ func Init(level Level) {
 		scriptDir = os.TempDir()
 	}
 
-	timestamp := time.Now().Format("20060102_150405")
-	logPath := filepath.Join(scriptDir, fmt.Sprintf("deploy_%s.log", timestamp))
+	logPath := filepath.Join(scriptDir, "deploy_tool.log")
 	defaultPath = logPath
 
 	file, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
