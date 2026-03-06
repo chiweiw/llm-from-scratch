@@ -11,6 +11,7 @@ const deployStore = useDeployStore();
 const selectedEnvId = ref("");
 const errorMessage = ref("");
 const showSuccess = ref(false);
+const pendingShellCommand = ref("");
 const logs = ref<Array<{ level: string; message: string; time: string }>>([]);
 const logContainer = ref<HTMLElement | null>(null);
 let progressInterval: number | undefined;
@@ -37,6 +38,7 @@ function handleLog(data: {
     message: data.line || data.message,
     time: timeStr,
   });
+  updatePendingShellCommand(data.line || data.message);
 
   if (logs.value.length > 1000) {
     logs.value = logs.value.slice(-1000);
@@ -47,6 +49,21 @@ function handleLog(data: {
       logContainer.value.scrollTop = logContainer.value.scrollHeight;
     }
   });
+}
+
+function updatePendingShellCommand(message?: string) {
+  if (!message) {
+    return;
+  }
+  const marker = "即将执行命令:";
+  const idx = message.indexOf(marker);
+  if (idx === -1) {
+    return;
+  }
+  const cmd = message.slice(idx + marker.length).trim();
+  if (cmd) {
+    pendingShellCommand.value = cmd;
+  }
 }
 
 useWailsEvent("log-event", handleLog);
@@ -68,6 +85,7 @@ onUnmounted(() => {
 async function startDeploy() {
   errorMessage.value = "";
   showSuccess.value = false;
+  pendingShellCommand.value = "";
   logs.value = [];
   deployStore.progress = null;
   precheckStatus.value = "idle";
@@ -154,6 +172,7 @@ function cancelDeploy() {
     progressInterval = undefined;
   }
   showSuccess.value = false;
+  pendingShellCommand.value = "";
 }
 </script>
 
@@ -275,7 +294,7 @@ function cancelDeploy() {
         </div>
 
         <div
-          v-if="deployStore.progress.errorMessage"
+          v-if="deployStore.progress.status === 'failed' && deployStore.progress.errorMessage"
           class="mt-4 rounded-md border border-red-200 bg-red-50 p-4 text-red-800"
         >
           <div class="font-medium">错误信息</div>
@@ -432,6 +451,14 @@ function cancelDeploy() {
         </div>
       </div>
     </div>
+
+      <div
+        v-if="pendingShellCommand"
+        class="mt-4 rounded-md border border-amber-300 bg-amber-50 p-3"
+      >
+        <div class="text-xs text-amber-700 mb-1">将要执行的 Shell 命令</div>
+        <pre class="text-sm text-amber-900 whitespace-pre-wrap break-all font-mono">{{ pendingShellCommand }}</pre>
+      </div>
 
     <!-- 操作按钮已移动到环境选择处 -->
   </div>

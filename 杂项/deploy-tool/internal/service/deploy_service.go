@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -501,10 +502,8 @@ func (s *DeployService) uploadAndRestartSequential(ctx context.Context, env *ent
 		// 重启该服务器
 		if server.EnableRestart && strings.TrimSpace(server.RestartScript) != "" {
 			s.updateStepStatus("远程重启", entity.StepStatusRunning, fmt.Sprintf("%s: 执行重启脚本", stagePrefix))
-			cmd := server.RestartScript
-			if server.UseSudo {
-				cmd = "sudo " + cmd
-			}
+			cmd := buildRestartCommand(server.RestartScript, server.UseSudo)
+			logger.Info("%s: 即将执行命令: %s", stagePrefix, cmd)
 			output, err := client.RunCommand(cmd)
 			if err != nil {
 				client.Close()
@@ -656,8 +655,11 @@ func (s *DeployService) deployFrontendToServers(ctx context.Context, env *entity
 	if strings.TrimSpace(target.RemoteName) != "" {
 		remoteName = target.RemoteName
 	}
-	baseDir := normalizeUrlPath(target.UrlPath)
 	for idx, server := range env.Servers {
+		baseDir := normalizeUrlPath(server.DeployDir)
+		if strings.TrimSpace(server.DeployDir) == "" {
+			baseDir = normalizeUrlPath(target.UrlPath)
+		}
 		stagePrefix := fmt.Sprintf("[%d/%d] 服务器 %s", idx+1, len(env.Servers), server.Name)
 		logger.Info("%s: 连接中 (%s:%d)...", stagePrefix, server.Host, server.Port)
 		client, err := utils.NewSFTPClient(server.Host, server.Port, server.Username, server.Password)
@@ -692,24 +694,17 @@ func (s *DeployService) deployFrontendToServers(ctx context.Context, env *entity
 		}
 		s.progress.FileProgress = 100
 
-		ts := time.Now().Format("20060102150405")
-		backupCmd := fmt.Sprintf("cd %s && if [ -d dist ]; then mv dist dist.%s.bak; fi", shellQuote(baseDir), ts)
+		backupCmd := fmt.Sprintf("set -e\ncd %s\nTS=$(date +%%Y%%m%%d%%H%%M%%S)\nif [ -d dist ]; then mv dist dist.${TS}.bak; fi", shellQuote(baseDir))
 		backupCmd = wrapSudo(backupCmd, server.UseSudo)
 		if output, err := client.RunCommand(backupCmd); err != nil {
 			client.Close()
 			return fmt.Errorf("%s: 备份失败: %v，输出: %s", stagePrefix, err, strings.TrimSpace(output))
 		}
 
-		tmpDir := "__dist_tmp__" + ts
-		unzipCmd := fmt.Sprintf("cd %s && rm -rf %s && rm -rf dist && (unzip -o %s -d %s >/dev/null 2>&1 || python3 -m zipfile -e %s %s) && mv %s/dist dist && rm -rf %s && rm -f %s",
+		unzipCmd := fmt.Sprintf("set -e\ncd %s\nTMP_DIR=__dist_tmp__$(date +%%Y%%m%%d%%H%%M%%S)\nrm -rf \"$TMP_DIR\"\nrm -rf dist\n(unzip -o %s -d \"$TMP_DIR\" >/dev/null 2>&1 || python3 -m zipfile -e %s \"$TMP_DIR\")\nmv \"$TMP_DIR\"/dist dist\nrm -rf \"$TMP_DIR\"\nrm -f %s",
 			shellQuote(baseDir),
-			shellQuote(tmpDir),
 			shellQuote(remoteName),
-			shellQuote(tmpDir),
 			shellQuote(remoteName),
-			shellQuote(tmpDir),
-			shellQuote(tmpDir),
-			shellQuote(tmpDir),
 			shellQuote(remoteName),
 		)
 		unzipCmd = wrapSudo(unzipCmd, server.UseSudo)
@@ -771,6 +766,37 @@ func wrapSudo(cmd string, useSudo bool) string {
 	return "sudo sh -c " + shellQuote(cmd)
 }
 
+func buildRestartCommand(restartScript string, useSudo bool) string {
+	script := strings.TrimSpace(restartScript)
+	if script == "" {
+		return wrapSudo(script, useSudo)
+	}
+
+	if shouldExpandRestartScriptPath(script) {
+		dir := path.Dir(script)
+		file := path.Base(script)
+		cmd := fmt.Sprintf("cd %s && sh %s", shellQuote(dir), shellQuote("./"+file))
+		return wrapSudo(cmd, useSudo)
+	}
+
+	return wrapSudo(script, useSudo)
+}
+
+func shouldExpandRestartScriptPath(script string) bool {
+	if script == "" {
+		return false
+	}
+	if strings.ContainsAny(script, " \t\r\n;&|><`()") {
+		return false
+	}
+
+	lower := strings.ToLower(script)
+	if strings.HasSuffix(lower, ".sh") && (strings.Contains(script, "/") || strings.Contains(script, `\`)) {
+		return true
+	}
+	return false
+}
+
 func (s *DeployService) TryAddHistoryLog(level, message string) {
 	if s.historyService == nil || s.currentHistoryID == "" {
 		return
@@ -797,7 +823,14 @@ func (s *DeployService) updateProgressStatus(status string, message string) {
 		return
 	}
 	s.progress.Status = status
-	s.progress.ErrorMessage = message
+	if status == entity.DeployStatusFailed {
+		s.progress.ErrorMessage = message
+	} else {
+		s.progress.ErrorMessage = ""
+	}
+	if status == entity.DeployStatusSuccess || status == entity.DeployStatusFailed || status == entity.DeployStatusCanceled {
+		s.progress.EndTime = time.Now().Unix()
+	}
 }
 
 func (s *DeployService) updateProgress(percent int) {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, watch } from "vue";
 import { useEnvironmentStore } from "../stores/environment";
 import type { Environment } from "../types";
 
@@ -95,6 +95,18 @@ async function saveEnvironment() {
         },
       ];
     }
+    if (editingEnv.value.buildType !== "frontend") {
+      const invalidServer = (editingEnv.value.servers || []).find(
+        (server) =>
+          server.enableRestart && isInvalidRestartScript(server.restartScript)
+      );
+      if (invalidServer) {
+        window.alert(
+          `服务器【${invalidServer.name || invalidServer.host || "未命名"}】的重启脚本必须以 .sh 结尾`
+        );
+        return;
+      }
+    }
     await envStore.saveEnvironment(editingEnv.value);
   } catch (error) {
     console.error("Save failed:", error);
@@ -134,6 +146,112 @@ async function checkCurrentEnvironment() {
     isChecking.value = false;
   }
 }
+
+function shouldExpandRestartScriptPath(script: string): boolean {
+  if (!script) return false;
+  if (/[ \t\r\n;&|><`()]/.test(script)) return false;
+  const lower = script.toLowerCase();
+  return lower.endsWith(".sh") && (script.includes("/") || script.includes("\\"));
+}
+
+function shellQuote(value: string): string {
+  if (!value) return "''";
+  return `'${value.replace(/'/g, `'\\''`)}'`;
+}
+
+function buildRestartCommand(script: string, useSudo: boolean): string {
+  const trimmed = (script || "").trim();
+  if (!trimmed) return "";
+
+  let cmd = trimmed;
+  if (shouldExpandRestartScriptPath(trimmed)) {
+    const normalized = trimmed.replace(/\\/g, "/");
+    const slashIndex = normalized.lastIndexOf("/");
+    if (slashIndex > 0 && slashIndex < normalized.length - 1) {
+      const dir = normalized.slice(0, slashIndex);
+      const file = normalized.slice(slashIndex + 1);
+      cmd = `cd ${shellQuote(dir)} && sh ${shellQuote("./" + file)}`;
+    }
+  }
+
+  if (useSudo) {
+    return `sudo sh -c ${shellQuote(cmd)}`;
+  }
+  return cmd;
+}
+
+function isInvalidRestartScript(script: string): boolean {
+  const trimmed = (script || "").trim();
+  if (!trimmed) return false;
+  return !trimmed.toLowerCase().endsWith(".sh");
+}
+
+function normalizeRemotePath(path: string): string {
+  const trimmed = (path || "").trim();
+  if (!trimmed) return "/";
+  const withoutTail = trimmed.replace(/\/$/, "");
+  return withoutTail.startsWith("/") ? withoutTail : `/${withoutTail}`;
+}
+
+function getFrontendRemoteName(): string {
+  const name = editingEnv.value?.targetFiles?.[0]?.remoteName?.trim();
+  return name || "dist.zip";
+}
+
+function wrapSudo(cmd: string, useSudo: boolean): string {
+  if (!useSudo) return cmd;
+  return `sudo sh -c ${shellQuote(cmd)}`;
+}
+
+function buildFrontendBackupCommand(baseDir: string, useSudo: boolean): string {
+  const cmd = [
+    "set -e",
+    `cd ${shellQuote(baseDir)}`,
+    "TS=$(date +%Y%m%d%H%M%S)",
+    "if [ -d dist ]; then mv dist dist.${TS}.bak; fi",
+  ].join("\n");
+  return wrapSudo(cmd, useSudo);
+}
+
+function buildFrontendUnzipCommand(baseDir: string, remoteName: string, useSudo: boolean): string {
+  const cmd = [
+    "set -e",
+    `cd ${shellQuote(baseDir)}`,
+    "TMP_DIR=__dist_tmp__$(date +%Y%m%d%H%M%S)",
+    'rm -rf "$TMP_DIR"',
+    "rm -rf dist",
+    `(unzip -o ${shellQuote(remoteName)} -d "$TMP_DIR" >/dev/null 2>&1 || python3 -m zipfile -e ${shellQuote(remoteName)} "$TMP_DIR")`,
+    'mv "$TMP_DIR"/dist dist',
+    'rm -rf "$TMP_DIR"',
+    `rm -f ${shellQuote(remoteName)}`,
+  ].join("\n");
+  return wrapSudo(cmd, useSudo);
+}
+
+watch(
+  () => editingEnv.value?.buildType,
+  (buildType) => {
+    if (buildType === "frontend" && editingEnv.value) {
+      if (!Array.isArray(editingEnv.value.targetFiles)) {
+        editingEnv.value.targetFiles = [];
+      }
+      if (editingEnv.value.targetFiles.length === 0) {
+        editingEnv.value.targetFiles = [
+          {
+            id: `file_${Date.now()}`,
+            localPath: "dist.zip",
+            remoteName: "dist.zip",
+            urlPath: "",
+            defaultCheck: true,
+          },
+        ];
+      }
+    }
+    if (buildType === "frontend" && activeTab.value === "targets") {
+      activeTab.value = "servers";
+    }
+  }
+);
 </script>
 
 <template>
@@ -381,6 +499,7 @@ async function checkCurrentEnvironment() {
               服务器
             </button>
             <button
+              v-if="editingEnv?.buildType !== 'frontend'"
               class="whitespace-nowrap border-b-2 px-1 py-4 text-sm font-medium"
               :class="
                 activeTab === 'targets'
@@ -570,64 +689,134 @@ async function checkCurrentEnvironment() {
                     placeholder="/home/omp/jar/"
                   />
                 </div>
-                <div class="col-span-2">
-                  <label class="block text-sm font-medium">重启脚本</label>
-                  <input
-                    v-model="server.restartScript"
-                    class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
-                    placeholder="/home/omp/jar/restart.sh"
-                  />
-                </div>
-                <div
-                  class="flex items-center justify-between rounded-md border border-gray-200 p-3"
-                >
-                  <div>
-                    <div class="text-sm font-medium">启用重启</div>
-                    <div class="text-xs text-gray-500">
-                      部署后自动执行重启脚本
-                    </div>
-                  </div>
-                  <label
-                    class="relative inline-flex cursor-pointer items-center"
+                <template v-if="editingEnv?.buildType !== 'frontend'">
+                  <div
+                    class="flex items-center justify-between rounded-md border border-gray-200 p-3"
                   >
-                    <input
-                      type="checkbox"
-                      class="peer sr-only"
-                      v-model="server.enableRestart"
-                    />
-                    <div
-                      class="h-6 w-11 rounded-full bg-gray-200 peer-checked:bg-blue-500 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-5"
-                    ></div>
-                  </label>
-                </div>
-                <div
-                  class="flex items-center justify-between rounded-md border border-gray-200 p-3"
-                >
-                  <div>
-                    <div class="text-sm font-medium">使用 Sudo</div>
-                    <div class="text-xs text-gray-500">
-                      使用 sudo 权限执行命令
+                    <div>
+                      <div class="text-sm font-medium">启用重启</div>
+                      <div class="text-xs text-gray-500">
+                        部署后自动执行重启脚本
+                      </div>
                     </div>
+                    <label
+                      class="relative inline-flex cursor-pointer items-center"
+                    >
+                      <input
+                        type="checkbox"
+                        class="peer sr-only"
+                        v-model="server.enableRestart"
+                      />
+                      <div
+                        class="h-6 w-11 rounded-full bg-gray-200 peer-checked:bg-blue-500 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-5"
+                      ></div>
+                    </label>
                   </div>
-                  <label
-                    class="relative inline-flex cursor-pointer items-center"
+                  <div
+                    class="flex items-center justify-between rounded-md border border-gray-200 p-3"
                   >
+                    <div>
+                      <div class="text-sm font-medium">使用 Sudo</div>
+                      <div class="text-xs text-gray-500">
+                        使用 sudo 权限执行命令
+                      </div>
+                    </div>
+                    <label
+                      class="relative inline-flex cursor-pointer items-center"
+                    >
+                      <input
+                        type="checkbox"
+                        class="peer sr-only"
+                        v-model="server.useSudo"
+                      />
+                      <div
+                        class="h-6 w-11 rounded-full bg-gray-200 peer-checked:bg-blue-500 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-5"
+                      ></div>
+                    </label>
+                  </div>
+                  <div v-if="server.enableRestart" class="col-span-2">
+                    <label class="block text-sm font-medium">重启脚本</label>
                     <input
-                      type="checkbox"
-                      class="peer sr-only"
-                      v-model="server.useSudo"
+                      v-model="server.restartScript"
+                      class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                      :class="{ 'border-red-300 focus:border-red-400': isInvalidRestartScript(server.restartScript) }"
+                      placeholder="/home/omp/jar/restart.sh"
                     />
-                    <div
-                      class="h-6 w-11 rounded-full bg-gray-200 peer-checked:bg-blue-500 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-5"
-                    ></div>
-                  </label>
+                    <p
+                      v-if="isInvalidRestartScript(server.restartScript)"
+                      class="mt-1 text-sm text-red-600"
+                    >
+                      重启脚本必须以 .sh 结尾
+                    </p>
+                  </div>
+                  <div
+                    v-if="server.enableRestart"
+                    class="col-span-2 rounded-md border border-amber-300 bg-amber-50 p-3"
+                  >
+                    <div class="text-xs text-amber-700 mb-1">将要执行的 Shell 命令</div>
+                    <pre class="text-sm text-amber-900 whitespace-pre-wrap break-all font-mono">{{
+                      buildRestartCommand(server.restartScript, server.useSudo) || "请先填写重启脚本"
+                    }}</pre>
+                  </div>
+                </template>
+            </div>
+          </div>
+          <div
+            v-if="editingEnv?.buildType === 'frontend'"
+            class="rounded-md border p-4"
+          >
+            <div class="mb-3">
+              <h4 class="font-medium">前端文件信息</h4>
+              <p class="text-sm text-gray-500">部署目录直接使用每台服务器的“部署目录”字段，不再单独配置 URL 路径</p>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium">本地路径</label>
+                <input
+                  value="dist.zip"
+                  disabled
+                  class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium">远程文件名</label>
+                <input
+                  :value="getFrontendRemoteName()"
+                  disabled
+                  class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                />
+              </div>
+              <div class="col-span-2 rounded-md border border-blue-200 bg-blue-50 p-3">
+                <div class="text-xs text-blue-700 mb-1">部署命令预览（上传 dist.zip 后）</div>
+                <div
+                  v-if="(editingEnv?.servers?.length ?? 0) === 0"
+                  class="text-sm text-blue-900"
+                >
+                  请先添加服务器并填写部署目录
+                </div>
+                <div v-else class="space-y-3">
+                  <div
+                    v-for="(server, idx) in editingEnv?.servers || []"
+                    :key="`frontend-cmd-${server.id}-${idx}`"
+                    class="rounded border border-blue-200 bg-white p-3"
+                  >
+                    <div class="text-xs text-gray-600 mb-1">{{ server.name || `服务器 ${idx + 1}` }} (目录: {{ normalizeRemotePath(server.deployDir) }})</div>
+                    <div class="text-xs text-blue-700">备份旧 dist</div>
+                    <pre class="text-sm text-blue-900 whitespace-pre-wrap break-all font-mono">{{ buildFrontendBackupCommand(normalizeRemotePath(server.deployDir), server.useSudo) }}</pre>
+                    <div class="text-xs text-blue-700 mt-2">解压并覆盖 dist</div>
+                    <pre class="text-sm text-blue-900 whitespace-pre-wrap break-all font-mono">{{ buildFrontendUnzipCommand(normalizeRemotePath(server.deployDir), getFrontendRemoteName(), server.useSudo) }}</pre>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
+        </div>
 
-        <div v-show="activeTab === 'targets'" class="space-y-4">
+        <div
+          v-show="activeTab === 'targets' && editingEnv?.buildType !== 'frontend'"
+          class="space-y-4"
+        >
           <div class="flex items-center justify-between rounded-md border p-4">
             <div>
               <h3 class="text-lg font-medium">目标文件配置</h3>
