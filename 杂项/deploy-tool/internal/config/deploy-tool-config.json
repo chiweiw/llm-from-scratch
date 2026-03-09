@@ -84,5 +84,103 @@
     "checkStatus": "unchecked",
     "createdAt": 1772360754,
     "updatedAt": 1772616096
+  },
+  {
+    "id": "env_test",
+    "name": "测试环境",
+    "identifier": "test",
+    "description": "测试环境后端 - deploy_tool_test.py 配置",
+    "projectRoot": "E:\\javaProject\\shanguotou-back",
+    "buildType": "backend",
+    "cloudDeploy": true,
+    "timeout": 600,
+    "servers": [
+      {
+        "id": "server_test_1",
+        "name": "测试服务器 (192.168.8.243)",
+        "host": "192.168.8.243",
+        "port": 22221,
+        "username": "plat",
+        "password": "ch@JY74w",
+        "deployDir": "/data/testShanguotou/jar/",
+        "restartScript": "/data/testShanguotou/jar/restart_jar_test.sh",
+        "enableRestart": true,
+        "useSudo": true
+      },
+      {
+        "id": "server_test_2",
+        "name": "测试服务器 (192.168.8.242)",
+        "host": "192.168.8.242",
+        "port": 22221,
+        "username": "plat",
+        "password": "ch@JY74w",
+        "deployDir": "/data/testShanguotou/jar/",
+        "restartScript": "/data/testShanguotou/jar/restart_jar_test.sh",
+        "enableRestart": true,
+        "useSudo": true
+      }
+    ],
+    "targetFiles": [
+      {
+        "id": "jar_test_1",
+        "localPath": "startup\\platform-startup-project\\target\\platform-startup-project.jar",
+        "remoteName": "platform-startup-project-test.jar",
+        "urlPath": "",
+        "defaultCheck": true
+      },
+      {
+        "id": "jar_test_2",
+        "localPath": "startup\\platform-startup-system\\target\\platform-startup-system.jar",
+        "remoteName": "platform-startup-system-test.jar",
+        "urlPath": "",
+        "defaultCheck": true
+      },
+      {
+        "id": "jar_test_3",
+        "localPath": "startup\\platform-startup-customer\\target\\platform-startup-customer.jar",
+        "remoteName": "platform-startup-customer-test.jar",
+        "urlPath": "",
+        "defaultCheck": true
+      }
+    ],
+    "checkStatus": "unchecked",
+    "createdAt": 1772360754,
+    "updatedAt": 1772616096
+  },
+  {
+    "id": "env_fe_test",
+    "name": "测试环境",
+    "identifier": "test-fe",
+    "description": "前端测试环境 - npm build + dist.zip",
+    "projectRoot": "E:\\javaProject\\shanguotou-front",
+    "buildType": "frontend",
+    "cloudDeploy": true,
+    "timeout": 600,
+    "servers": [
+      {
+        "id": "server_fe_test_1",
+        "name": "测试服务器 (192.168.8.243)",
+        "host": "192.168.8.243",
+        "port": 22221,
+        "username": "plat",
+        "password": "ch@JY74w",
+        "deployDir": "",
+        "restartScript": "",
+        "enableRestart": false,
+        "useSudo": false
+      }
+    ],
+    "targetFiles": [
+      {
+        "id": "file_fe_test_1",
+        "localPath": "dist.zip",
+        "remoteName": "dist.zip",
+        "urlPath": "/home/plat/testShanguotou/frontend",
+        "defaultCheck": true
+      }
+    ],
+    "checkStatus": "unchecked",
+    "createdAt": 1772360754,
+    "updatedAt": 1772616096
   }
 ]

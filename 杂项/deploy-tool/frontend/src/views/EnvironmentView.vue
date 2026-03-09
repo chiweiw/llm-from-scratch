@@ -779,7 +779,10 @@ watch(
                 />
               </div>
               <div>
-                <label class="block text-sm font-medium">远程文件名</label>
+                <label class="block text-sm font-medium">
+                  远程文件名
+                  <span class="block text-xs text-gray-500">(可选)</span>
+                </label>
                 <input
                   :value="getFrontendRemoteName()"
                   disabled
@@ -857,23 +860,14 @@ watch(
                 />
               </div>
               <div>
-                <label class="block text-sm font-medium"
-                  >远程文件名 (可选)</label
-                >
+                  <label class="block text-sm font-medium">
+                    远程文件名
+                    <span class="block text-xs text-gray-500">(可选)</span>
+                  </label>
                 <input
                   value="dist.zip"
                   disabled
                   class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
-                />
-              </div>
-              <div class="col-span-2">
-                <label class="block text-sm font-medium"
-                  >URL 路径（远程绝对目录）</label
-                >
-                <input
-                  v-model="editingEnv.targetFiles[0].urlPath"
-                  class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
-                  placeholder="/data/test/web"
                 />
               </div>
             </div>
@@ -894,11 +888,16 @@ watch(
               >
                 <div class="mb-4 flex items-center justify-between">
                   <div class="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      v-model="file.defaultCheck"
-                      class="rounded"
-                    />
+                    <label class="relative inline-flex cursor-pointer items-center">
+                      <input
+                        type="checkbox"
+                        class="peer sr-only"
+                        v-model="file.defaultCheck"
+                      />
+                      <div
+                        class="h-6 w-11 rounded-full bg-gray-200 peer-checked:bg-blue-500 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-5"
+                      ></div>
+                    </label>
                     <h4 class="font-medium">文件 {{ index + 1 }}</h4>
                   </div>
                   <button
@@ -918,23 +917,14 @@ watch(
                     />
                   </div>
                   <div>
-                    <label class="block text-sm font-medium"
-                      >远程文件名 (可选)</label
-                    >
+                    <label class="block text-sm font-medium">
+                      远程文件名
+                      <span class="block text-xs text-gray-500">(可选)</span>
+                    </label>
                     <input
                       v-model="file.remoteName"
                       class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
                       placeholder="留空则使用原文件名"
-                    />
-                  </div>
-                  <div class="col-span-2">
-                    <label class="block text-sm font-medium"
-                      >URL 路径（远程绝对目录）</label
-                    >
-                    <input
-                      v-model="file.urlPath"
-                      class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
-                      placeholder="例如: /data/test/web"
                     />
                   </div>
                 </div>
