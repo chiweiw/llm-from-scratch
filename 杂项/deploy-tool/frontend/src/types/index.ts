@@ -43,6 +43,7 @@ export interface GlobalSettings {
   notifyOnComplete: boolean;
   cloudDeploy: boolean;
   offlineBuild: boolean;
+  lightLog: boolean;
   theme: string;
   language: string;
 }
@@ -87,7 +88,9 @@ export interface DeployProgress {
   speed: string;
   startTime: number;
   endTime: number;
+  elapsedSeconds: number;
   errorMessage: string;
+  version: number;
 }
 
 export interface StepProgress {

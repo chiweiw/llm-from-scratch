@@ -115,6 +115,7 @@ func defaultSettings() entity.GlobalSettings {
 		DefaultTimeout:   600,
 		LogRetentionDays: 30,
 		BackupEnabled:    true,
+		BackupCleanup:    true,
 		NotifyOnComplete: true,
 		CloudDeploy:      true,
 		OfflineBuild:     true,

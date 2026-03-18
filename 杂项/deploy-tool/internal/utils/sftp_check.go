@@ -1,13 +1,16 @@
 package utils
 
 import (
+	"context"
 	"deploy-tool/internal/model/entity"
 	"fmt"
 	"io"
 	"os"
 	"path"
 	"path/filepath"
-	"strings"
+	"regexp"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/pkg/sftp"
@@ -100,8 +103,21 @@ func (s *SFTPClient) UploadFile(localPath, remoteDir, remoteName string) error {
 }
 
 func (s *SFTPClient) UploadFileWithProgress(localPath, remoteDir, remoteName string, onProgress func(written, total int64)) error {
+	return s.UploadFileWithProgressCtx(context.Background(), localPath, remoteDir, remoteName, onProgress, 0, 0)
+}
+
+func (s *SFTPClient) UploadFileWithProgressCtx(ctx context.Context, localPath, remoteDir, remoteName string, onProgress func(written, total int64), idleTimeout time.Duration, totalTimeout time.Duration) error {
 	if s.client == nil {
 		return fmt.Errorf("SSH客户端未初始化")
+	}
+
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if totalTimeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, totalTimeout)
+		defer cancel()
 	}
 
 	sftpClient, err := sftp.NewClient(s.client)
@@ -150,14 +166,61 @@ func (s *SFTPClient) UploadFileWithProgress(localPath, remoteDir, remoteName str
 	const bufSize = 256 * 1024
 	buf := make([]byte, bufSize)
 	var written int64 = 0
+	lastProgress := time.Now().UnixNano()
 	if onProgress != nil {
 		onProgress(0, total)
+		atomic.StoreInt64(&lastProgress, time.Now().UnixNano())
 	}
+
+	var closeOnce sync.Once
+	closeAll := func() {
+		closeOnce.Do(func() {
+			_ = sftpClient.Close()
+			_ = s.client.Close()
+		})
+	}
+
+	done := make(chan struct{})
+	defer close(done)
+	var idleTimedOut int32
+
+	go func() {
+		ticker := time.NewTicker(500 * time.Millisecond)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				closeAll()
+				return
+			case <-done:
+				return
+			case <-ticker.C:
+				if idleTimeout > 0 {
+					last := time.Unix(0, atomic.LoadInt64(&lastProgress))
+					if time.Since(last) > idleTimeout {
+						atomic.StoreInt32(&idleTimedOut, 1)
+						closeAll()
+						return
+					}
+				}
+			}
+		}
+	}()
+
 	for {
+		if ctx.Err() != nil {
+			return fmt.Errorf("上传超时: %v", ctx.Err())
+		}
 		n, readErr := src.Read(buf)
 		if n > 0 {
 			w, writeErr := dst.Write(buf[:n])
 			if writeErr != nil {
+				if ctx.Err() != nil {
+					return fmt.Errorf("上传超时: %v", ctx.Err())
+				}
+				if atomic.LoadInt32(&idleTimedOut) == 1 {
+					return fmt.Errorf("上传超时: 超过 %s 无进展", idleTimeout)
+				}
 				return fmt.Errorf("写入远程文件失败: %v", writeErr)
 			}
 			if w != n {
@@ -166,13 +229,26 @@ func (s *SFTPClient) UploadFileWithProgress(localPath, remoteDir, remoteName str
 			written += int64(w)
 			if onProgress != nil {
 				onProgress(written, total)
+				atomic.StoreInt64(&lastProgress, time.Now().UnixNano())
 			}
 		}
 		if readErr != nil {
 			if readErr == io.EOF {
 				break
 			}
+			if ctx.Err() != nil {
+				return fmt.Errorf("上传超时: %v", ctx.Err())
+			}
+			if atomic.LoadInt32(&idleTimedOut) == 1 {
+				return fmt.Errorf("上传超时: 超过 %s 无进展", idleTimeout)
+			}
 			return fmt.Errorf("读取本地文件失败: %v", readErr)
+		}
+	}
+	if idleTimeout > 0 {
+		last := time.Unix(0, atomic.LoadInt64(&lastProgress))
+		if time.Since(last) > idleTimeout {
+			return fmt.Errorf("上传超时: 超过 %s 无进展", idleTimeout)
 		}
 	}
 	return nil
@@ -283,10 +359,10 @@ func (s *SFTPClient) BackupRemoteFile(remoteDir, remoteName string, cleanup bool
 	if cleanup {
 		dirList, err := sftpClient.ReadDir(remoteDir)
 		if err == nil {
-			prefix := remoteName + "."
+			backupPattern := regexp.MustCompile(`\.[0-9]{14}\.bak$`)
 			for _, f := range dirList {
 				name := f.Name()
-				if strings.HasPrefix(name, prefix) && strings.HasSuffix(name, ".bak") {
+				if backupPattern.MatchString(name) {
 					_ = sftpClient.Remove(path.Join(remoteDir, name))
 				}
 			}

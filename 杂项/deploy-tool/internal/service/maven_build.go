@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -21,13 +22,18 @@ import (
 
 type MavenBuildService struct {
 	progress      *entity.DeployProgress
-	progressMutex sync.Mutex
+	progressMutex *sync.RWMutex
 	ctx           context.Context
 	cancel        context.CancelFunc
+	cmd           *exec.Cmd // running maven command; set after cmd.Start() succeeds
 }
 
 func NewMavenBuildService() *MavenBuildService {
 	return &MavenBuildService{}
+}
+
+func (s *MavenBuildService) SetProgressMutex(mu *sync.RWMutex) {
+	s.progressMutex = mu
 }
 
 type MavenBuildConfig struct {
@@ -56,18 +62,22 @@ func (s *MavenBuildService) StartBuild(ctx context.Context, cfg *MavenBuildConfi
 
 	s.ctx, s.cancel = context.WithCancel(ctx)
 	s.progress = progress
-	s.progressMutex.Lock()
-	s.progress.Status = entity.DeployStatusRunning
-	s.progress.StartTime = time.Now().Unix()
-	s.progressMutex.Unlock()
+	unlock := s.lockProgress()
+	if s.progress != nil {
+		s.progress.Status = entity.DeployStatusRunning
+		s.progress.StartTime = time.Now().Unix()
+	}
+	unlock()
 
 	defer func() {
-		s.progressMutex.Lock()
-		s.progress.EndTime = time.Now().Unix()
-		if s.progress.Status == entity.DeployStatusRunning {
-			s.progress.Status = entity.DeployStatusSuccess
+		unlock := s.lockProgress()
+		if s.progress != nil {
+			s.progress.EndTime = time.Now().Unix()
+			if s.progress.Status == entity.DeployStatusRunning {
+				s.progress.Status = entity.DeployStatusSuccess
+			}
 		}
-		s.progressMutex.Unlock()
+		unlock()
 	}()
 
 	result := &MavenBuildResult{
@@ -99,10 +109,16 @@ func (s *MavenBuildService) StartBuild(ctx context.Context, cfg *MavenBuildConfi
 	if err := cmd.Start(); err != nil {
 		return result, fmt.Errorf("启动 Maven 失败: %v", err)
 	}
+	// Store after successful start so Cancel() can reach the process.
+	s.cmd = cmd
 
 	// 收集所有日志行（线程安全）
 	var logMu sync.Mutex
 	var allLines []string
+
+	// replayLogPattern 匹配 JVM 崩溃时生成的 replay 文件路径行：
+	//   # D:\path\to\replay_pid12345.log
+	replayLogPattern := regexp.MustCompile(`#\s+(.+replay_pid\d+\.log)`)
 
 	readLines := func(r io.Reader, isStderr bool) {
 		scanner := bufio.NewScanner(r)
@@ -126,6 +142,25 @@ func (s *MavenBuildService) StartBuild(ctx context.Context, cfg *MavenBuildConfi
 			default:
 				logger.Info("[Maven] %s", trimmed)
 			}
+
+			// JVM 崩溃时会打印 replay 文件路径，自动读取并输出其内容
+			if m := replayLogPattern.FindStringSubmatch(trimmed); len(m) > 1 {
+				replayPath := strings.TrimSpace(m[1])
+				go func(path string) {
+					data, err := os.ReadFile(path)
+					if err != nil {
+						logger.Warn("[Maven] 无法读取 JVM 崩溃日志 %s: %v", path, err)
+						return
+					}
+					logger.Error("[Maven] === JVM 崩溃日志: %s ===", path)
+					for _, l := range strings.Split(string(data), "\n") {
+						if t := strings.TrimSpace(l); t != "" {
+							logger.Error("[Maven] %s", t)
+						}
+					}
+					logger.Error("[Maven] === JVM 崩溃日志结束 ===")
+				}(replayPath)
+			}
 		}
 	}
 
@@ -136,6 +171,21 @@ func (s *MavenBuildService) StartBuild(ctx context.Context, cfg *MavenBuildConfi
 	wg.Wait()
 
 	if err := cmd.Wait(); err != nil {
+		// 把已收集的 [ERROR] 行再集中输出一次，方便前端用户看到具体错误
+		logMu.Lock()
+		errorLines := make([]string, 0, len(allLines))
+		for _, l := range allLines {
+			if strings.Contains(strings.ToLower(l), "[error]") {
+				errorLines = append(errorLines, l)
+			}
+		}
+		logMu.Unlock()
+		if len(errorLines) > 0 {
+			logger.Error("Maven 构建错误摘要:")
+			for _, l := range errorLines {
+				logger.Error("  %s", l)
+			}
+		}
 		logger.Error("Maven 构建失败: %v", err)
 		s.updateStepStatus("Maven 打包", entity.StepStatusFailed, fmt.Sprintf("Maven 构建失败: %v", err))
 		result.ErrorMessage = fmt.Sprintf("Maven 构建失败: %v", err)
@@ -162,13 +212,33 @@ func (s *MavenBuildService) StartBuild(ctx context.Context, cfg *MavenBuildConfi
 	result.Duration = time.Since(time.Unix(s.progress.StartTime, 0))
 
 	s.updateStepStatus("Maven 打包", entity.StepStatusSuccess, fmt.Sprintf("构建完成，生成 %d 个文件", len(builtFiles)))
-	s.progress.TotalProgress = 100
+	unlock = s.lockProgress()
+	if s.progress != nil {
+		s.progress.TotalProgress = 100
+	}
+	unlock()
 
 	result.Success = true
 	return result, nil
 }
 
 func (s *MavenBuildService) Cancel() {
+	// Kill the full process tree first.
+	// On Windows, exec.CommandContext only kills the mvn.cmd launcher but leaves
+	// the spawned JVM alive. taskkill /F /T terminates the whole tree.
+	if s.cmd != nil && s.cmd.Process != nil {
+		if runtime.GOOS == "windows" {
+			kill := exec.Command("taskkill", "/F", "/T", "/PID",
+				strconv.Itoa(s.cmd.Process.Pid))
+			kill.SysProcAttr = &syscall.SysProcAttr{
+				CreationFlags: 0x08000000, // CREATE_NO_WINDOW
+				HideWindow:    true,
+			}
+			_ = kill.Run()
+		} else {
+			_ = s.cmd.Process.Kill()
+		}
+	}
 	if s.cancel != nil {
 		s.cancel()
 	}
@@ -362,9 +432,20 @@ func (s *MavenBuildService) parseLogLines(content string) []string {
 	return lines
 }
 
+func (s *MavenBuildService) lockProgress() func() {
+	if s.progressMutex != nil {
+		s.progressMutex.Lock()
+		return s.progressMutex.Unlock
+	}
+	return func() {}
+}
+
 func (s *MavenBuildService) updateStepStatus(stepName string, status string, message string) {
-	s.progressMutex.Lock()
-	defer s.progressMutex.Unlock()
+	unlock := s.lockProgress()
+	defer unlock()
+	if s.progress == nil {
+		return
+	}
 
 	found := false
 	for i, step := range s.progress.Steps {
@@ -388,8 +469,11 @@ func (s *MavenBuildService) updateStepStatus(stepName string, status string, mes
 }
 
 func (s *MavenBuildService) updateProgress(percent int) {
-	s.progressMutex.Lock()
-	defer s.progressMutex.Unlock()
+	unlock := s.lockProgress()
+	defer unlock()
+	if s.progress == nil {
+		return
+	}
 
 	if percent > 100 {
 		percent = 100

@@ -352,6 +352,9 @@ func (s *ConfigService) loadSettings() entity.GlobalSettings {
 	if backup, ok := settingsMap["backup_enabled"]; ok {
 		settings.BackupEnabled = backup == "true"
 	}
+	if cleanup, ok := settingsMap["backup_cleanup"]; ok {
+		settings.BackupCleanup = cleanup == "true"
+	}
 	if notify, ok := settingsMap["notify_on_complete"]; ok {
 		settings.NotifyOnComplete = notify == "true"
 	}
@@ -360,6 +363,9 @@ func (s *ConfigService) loadSettings() entity.GlobalSettings {
 	}
 	if offline, ok := settingsMap["offline_build"]; ok {
 		settings.OfflineBuild = offline == "true"
+	}
+	if lightLog, ok := settingsMap["light_log"]; ok {
+		settings.LightLog = lightLog == "true"
 	}
 	if theme, ok := settingsMap["theme"]; ok {
 		settings.Theme = theme
@@ -381,6 +387,9 @@ func (s *ConfigService) saveSettings(settings entity.GlobalSettings) error {
 	if err := s.globalSettingDAO.Set("backup_enabled", fmt.Sprintf("%v", settings.BackupEnabled)); err != nil {
 		return err
 	}
+	if err := s.globalSettingDAO.Set("backup_cleanup", fmt.Sprintf("%v", settings.BackupCleanup)); err != nil {
+		return err
+	}
 	if err := s.globalSettingDAO.Set("notify_on_complete", fmt.Sprintf("%v", settings.NotifyOnComplete)); err != nil {
 		return err
 	}
@@ -388,6 +397,9 @@ func (s *ConfigService) saveSettings(settings entity.GlobalSettings) error {
 		return err
 	}
 	if err := s.globalSettingDAO.Set("offline_build", fmt.Sprintf("%v", settings.OfflineBuild)); err != nil {
+		return err
+	}
+	if err := s.globalSettingDAO.Set("light_log", fmt.Sprintf("%v", settings.LightLog)); err != nil {
 		return err
 	}
 	if err := s.globalSettingDAO.Set("theme", settings.Theme); err != nil {
@@ -528,9 +540,11 @@ func defaultSettings() entity.GlobalSettings {
 		DefaultTimeout:   600,
 		LogRetentionDays: 30,
 		BackupEnabled:    true,
+		BackupCleanup:    true,
 		NotifyOnComplete: true,
 		CloudDeploy:      true,
 		OfflineBuild:     true,
+		LightLog:         true,
 		Theme:            "system",
 		Language:         "zh-Hans",
 	}

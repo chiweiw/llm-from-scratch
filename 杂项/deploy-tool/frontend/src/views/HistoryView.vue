@@ -100,7 +100,7 @@ const filteredHistories = computed(() => {
       <div class="grid grid-cols-4 gap-3 items-end">
         <div>
           <label class="block text-xs text-muted-foreground mb-1">环境</label>
-          <select v-model="filterEnv" class="w-full rounded border px-2 py-1">
+          <select v-model="filterEnv" class="w-full rounded border border-input bg-background px-2 py-1 text-sm">
             <option value="">全部</option>
             <option v-for="env in envOptions" :key="env" :value="env">
               {{ env }}
@@ -111,7 +111,7 @@ const filteredHistories = computed(() => {
           <label class="block text-xs text-muted-foreground mb-1">状态</label>
           <select
             v-model="filterStatus"
-            class="w-full rounded border px-2 py-1"
+            class="w-full rounded border border-input bg-background px-2 py-1 text-sm"
           >
             <option value="">全部</option>
             <option value="success">成功</option>

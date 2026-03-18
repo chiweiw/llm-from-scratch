@@ -9,7 +9,10 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
+	"syscall"
+	"sync"
 	"time"
 
 	"deploy-tool/internal/logger"
@@ -19,23 +22,51 @@ import (
 
 type DeployService struct {
 	progress         *entity.DeployProgress
+	progressMu       sync.RWMutex
 	mavenBuild       *MavenBuildService
 	cfgService       *ConfigService
 	historyService   *HistoryService
 	cancelFunc       context.CancelFunc
 	currentHistoryID string
 	wailsCtx         context.Context
+	progressEmitCh   chan struct{}
+	onProgressEmit   func(p *entity.DeployProgress)
 }
 
 func NewDeployService(cfgService *ConfigService, historyService *HistoryService, wailsCtx context.Context) *DeployService {
-	return &DeployService{
+	svc := &DeployService{
 		cfgService:     cfgService,
 		historyService: historyService,
 		wailsCtx:       wailsCtx,
 		progress: &entity.DeployProgress{
 			Status: entity.DeployStatusIdle,
 		},
-		mavenBuild: NewMavenBuildService(),
+		mavenBuild:     NewMavenBuildService(),
+		progressEmitCh: make(chan struct{}, 1),
+	}
+	svc.mavenBuild.SetProgressMutex(&svc.progressMu)
+	return svc
+}
+
+// SetProgressEmitter registers the callback used to push deploy-progress events to
+// the frontend, and starts the background emitter goroutine.  Must be called after
+// the Wails context is ready (i.e. from App.Startup).
+func (s *DeployService) SetProgressEmitter(fn func(p *entity.DeployProgress)) {
+	s.onProgressEmit = fn
+	go s.runProgressEmitter()
+}
+
+// runProgressEmitter drains progressEmitCh and calls onProgressEmit.
+// Running in a separate goroutine ensures we never emit while holding the mutex.
+func (s *DeployService) runProgressEmitter() {
+	for range s.progressEmitCh {
+		if s.onProgressEmit == nil {
+			continue
+		}
+		p := s.GetProgress()
+		if p != nil {
+			s.onProgressEmit(p)
+		}
 	}
 }
 
@@ -79,6 +110,7 @@ func (s *DeployService) Start(envID string, jarIDs []string) error {
 		}
 	}
 
+	s.progressMu.Lock()
 	s.progress = &entity.DeployProgress{
 		EnvironmentID: envID,
 		Status:        entity.DeployStatusRunning,
@@ -86,6 +118,7 @@ func (s *DeployService) Start(envID string, jarIDs []string) error {
 		TotalProgress: 0,
 		Steps:         steps,
 	}
+	s.progressMu.Unlock()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	s.cancelFunc = cancel
@@ -148,7 +181,7 @@ func (s *DeployService) executeDeploy(ctx context.Context, env *entity.Environme
 		s.updateProgressStatus(entity.DeployStatusSuccess, "部署完成")
 		logger.Info("部署流程完成")
 		if s.historyService != nil && historyID != "" {
-			duration := time.Now().Unix() - s.progress.StartTime
+			duration := time.Now().Unix() - s.getProgressStartTime()
 			s.historyService.Update(historyID, "success", files, duration, "")
 		}
 		return
@@ -159,6 +192,10 @@ func (s *DeployService) executeDeploy(ctx context.Context, env *entity.Environme
 	mavenCfg := s.buildMavenConfig(env)
 	buildResult, err := s.mavenBuild.StartBuild(ctx, mavenCfg, s.progress)
 	if err != nil {
+		if ctx.Err() != nil {
+			// Deployment was cancelled; Cancel() already set the final status.
+			return
+		}
 		logger.Error("Maven 打包失败: %v", err)
 		s.updateProgressStatus(entity.DeployStatusFailed, fmt.Sprintf("Maven 打包失败: %v", err))
 		if s.historyService != nil && historyID != "" {
@@ -168,6 +205,9 @@ func (s *DeployService) executeDeploy(ctx context.Context, env *entity.Environme
 	}
 
 	if !buildResult.Success {
+		if ctx.Err() != nil {
+			return
+		}
 		logger.Error("Maven 打包失败: %s", buildResult.ErrorMessage)
 		s.updateProgressStatus(entity.DeployStatusFailed, buildResult.ErrorMessage)
 		if s.historyService != nil && historyID != "" {
@@ -182,7 +222,7 @@ func (s *DeployService) executeDeploy(ctx context.Context, env *entity.Environme
 	if env.CloudDeploy {
 		logger.Info("开始逐台服务器上传并重启...")
 		s.updateStepStatus("文件上传", entity.StepStatusRunning, "准备上传文件...")
-		s.updateStepStatus("远程重启", entity.StepStatusRunning, "准备执行重启脚本...")
+		s.updateStepStatus("远程重启", entity.StepStatusPending, "等待上传完成")
 		if err := s.uploadAndRestartSequential(ctx, env, buildResult.BuiltFiles, jarIDs); err != nil {
 			logger.Error("上传/重启失败: %v", err)
 			// 哪个步骤失败就更新哪个步骤
@@ -212,7 +252,7 @@ func (s *DeployService) executeDeploy(ctx context.Context, env *entity.Environme
 	logger.Info("部署流程完成")
 
 	if s.historyService != nil && historyID != "" {
-		duration := time.Now().Unix() - s.progress.StartTime
+		duration := time.Now().Unix() - s.getProgressStartTime()
 		files := ""
 		if len(buildResult.BuiltFiles) > 0 {
 			for _, f := range buildResult.BuiltFiles {
@@ -370,8 +410,8 @@ func (s *DeployService) uploadFiles(ctx context.Context, env *entity.Environment
 			}
 
 			logger.Info("上传文件: %s -> %s:%s/%s", localPath, server.Host, server.DeployDir, remoteName)
-			s.progress.CurrentFile = localPath
-			s.progress.FileProgress = 0
+			s.setCurrentFile(localPath)
+			s.setFileProgress(0, "")
 
 			// 备份远程旧文件
 			if err := client.BackupRemoteFile(server.DeployDir, remoteName, s.cfgService.GetSettings().BackupCleanup); err != nil {
@@ -388,13 +428,13 @@ func (s *DeployService) uploadFiles(ctx context.Context, env *entity.Environment
 				if total > 0 {
 					percent = int((written * 100) / total)
 				}
-				s.progress.FileProgress = percent
+				s.setFileProgress(percent, "")
 				now := time.Now()
 				if lastReport.IsZero() || now.Sub(lastReport) > 500*time.Millisecond {
 					elapsed := now.Sub(start).Seconds()
 					if elapsed > 0 {
 						speed := float64(written) / 1024.0 / 1024.0 / elapsed
-						s.progress.Speed = fmt.Sprintf("%.2f MB/s", speed)
+						s.setFileProgress(percent, fmt.Sprintf("%.2f MB/s", speed))
 					}
 					lastReport = now
 					lastBytes = written
@@ -403,12 +443,14 @@ func (s *DeployService) uploadFiles(ctx context.Context, env *entity.Environment
 				}
 			}
 
-			if err := client.UploadFileWithProgress(localPath, server.DeployDir, remoteName, onProgress); err != nil {
+			uploadTimeout := s.getUploadTimeout(env)
+			idleTimeout := s.getUploadIdleTimeout(uploadTimeout)
+			if err := client.UploadFileWithProgressCtx(ctx, localPath, server.DeployDir, remoteName, onProgress, idleTimeout, uploadTimeout); err != nil {
 				client.Close()
 				return fmt.Errorf("上传文件到服务器 %s 失败: %v", server.Name, err)
 			}
 
-			s.progress.FileProgress = 100
+			s.setFileProgress(100, "")
 		}
 
 		client.Close()
@@ -444,36 +486,60 @@ func (s *DeployService) uploadAndRestartSequential(ctx context.Context, env *ent
 		return fmt.Errorf("未选择任何要上传的文件")
 	}
 
-	for idx, server := range env.Servers {
-		if ctx.Err() != nil {
-			return ctx.Err()
+	clients := make([]*utils.SFTPClient, len(env.Servers))
+	getClient := func(idx int, server entity.ServerConfig, stagePrefix string) (*utils.SFTPClient, error) {
+		if clients[idx] != nil {
+			return clients[idx], nil
 		}
-		stagePrefix := fmt.Sprintf("[%d/%d] 服务器 %s", idx+1, len(env.Servers), server.Name)
 		logger.Info("%s: 连接中 (%s:%d)...", stagePrefix, server.Host, server.Port)
 		client, err := utils.NewSFTPClient(server.Host, server.Port, server.Username, server.Password)
 		if err != nil {
-			return fmt.Errorf("%s: 连接失败: %v", stagePrefix, err)
+			return nil, err
 		}
+		clients[idx] = client
+		return client, nil
+	}
+	defer func() {
+		for _, client := range clients {
+			if client != nil {
+				client.Close()
+			}
+		}
+	}()
 
-		// 上传前备份并上传所有目标
-		for _, t := range selectedTargets {
-			localPath := t.LocalPath
-			if !filepath.IsAbs(localPath) {
-				localPath = filepath.Join(env.ProjectRoot, filepath.FromSlash(localPath))
+	for _, t := range selectedTargets {
+		localPath := t.LocalPath
+		if !filepath.IsAbs(localPath) {
+			localPath = filepath.Join(env.ProjectRoot, filepath.FromSlash(localPath))
+		}
+		remoteName := strings.TrimSpace(t.RemoteName)
+		if remoteName == "" {
+			remoteName = filepath.Base(localPath)
+		}
+		stepName := fmt.Sprintf("发送文件: %s", remoteName)
+		s.updateStepStatus(stepName, entity.StepStatusRunning, "准备上传")
+
+		for idx, server := range env.Servers {
+			if ctx.Err() != nil {
+				s.updateStepStatus(stepName, entity.StepStatusFailed, ctx.Err().Error())
+				return ctx.Err()
 			}
-			remoteName := t.RemoteName
-			if strings.TrimSpace(remoteName) == "" {
-				remoteName = filepath.Base(localPath)
+			stagePrefix := fmt.Sprintf("[%d/%d] 服务器 %s", idx+1, len(env.Servers), server.Name)
+			client, err := getClient(idx, server, stagePrefix)
+			if err != nil {
+				s.updateStepStatus(stepName, entity.StepStatusFailed, fmt.Sprintf("%s: 连接失败: %v", stagePrefix, err))
+				return fmt.Errorf("%s: 连接失败: %v", stagePrefix, err)
 			}
+
 			logger.Info("%s: 备份远程旧文件 %s", stagePrefix, remoteName)
 			if err := client.BackupRemoteFile(server.DeployDir, remoteName, s.cfgService.GetSettings().BackupCleanup); err != nil {
-				client.Close()
+				s.updateStepStatus(stepName, entity.StepStatusFailed, fmt.Sprintf("%s: 备份失败: %v", stagePrefix, err))
 				return fmt.Errorf("%s: 备份失败: %v", stagePrefix, err)
 			}
 
 			logger.Info("%s: 上传 %s -> %s:%s/%s", stagePrefix, localPath, server.Host, server.DeployDir, remoteName)
-			s.progress.CurrentFile = localPath
-			s.progress.FileProgress = 0
+			s.setCurrentFile(localPath)
+			s.setFileProgress(0, "")
 			start := time.Now()
 			var lastReport time.Time
 			onProgress := func(written, total int64) {
@@ -481,32 +547,46 @@ func (s *DeployService) uploadAndRestartSequential(ctx context.Context, env *ent
 				if total > 0 {
 					percent = int((written * 100) / total)
 				}
-				s.progress.FileProgress = percent
+				s.setFileProgress(percent, "")
 				now := time.Now()
 				if lastReport.IsZero() || now.Sub(lastReport) > 500*time.Millisecond {
 					elapsed := now.Sub(start).Seconds()
 					if elapsed > 0 {
 						speed := float64(written) / 1024.0 / 1024.0 / elapsed
-						s.progress.Speed = fmt.Sprintf("%.2f MB/s", speed)
+						s.setFileProgress(percent, fmt.Sprintf("%.2f MB/s", speed))
 					}
 					lastReport = now
 				}
 			}
-			if err := client.UploadFileWithProgress(localPath, server.DeployDir, remoteName, onProgress); err != nil {
-				client.Close()
+			uploadTimeout := s.getUploadTimeout(env)
+			idleTimeout := s.getUploadIdleTimeout(uploadTimeout)
+			if err := client.UploadFileWithProgressCtx(ctx, localPath, server.DeployDir, remoteName, onProgress, idleTimeout, uploadTimeout); err != nil {
+				s.updateStepStatus(stepName, entity.StepStatusFailed, fmt.Sprintf("%s: 上传失败: %v", stagePrefix, err))
 				return fmt.Errorf("%s: 上传失败: %v", stagePrefix, err)
 			}
-			s.progress.FileProgress = 100
+			s.setFileProgress(100, "")
 		}
 
-		// 重启该服务器
+		s.updateStepStatus(stepName, entity.StepStatusSuccess, "上传完成")
+	}
+
+	s.updateStepStatus("远程重启", entity.StepStatusRunning, "准备执行重启脚本...")
+	for idx, server := range env.Servers {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		stagePrefix := fmt.Sprintf("[%d/%d] 服务器 %s", idx+1, len(env.Servers), server.Name)
+		client, err := getClient(idx, server, stagePrefix)
+		if err != nil {
+			return fmt.Errorf("%s: 连接失败: %v", stagePrefix, err)
+		}
+
 		if server.EnableRestart && strings.TrimSpace(server.RestartScript) != "" {
 			s.updateStepStatus("远程重启", entity.StepStatusRunning, fmt.Sprintf("%s: 执行重启脚本", stagePrefix))
 			cmd := buildRestartCommand(server.RestartScript, server.UseSudo)
 			logger.Info("%s: 即将执行命令: %s", stagePrefix, cmd)
 			output, err := client.RunCommand(cmd)
 			if err != nil {
-				client.Close()
 				return fmt.Errorf("%s: 重启失败: %v，输出: %s", stagePrefix, err, strings.TrimSpace(output))
 			}
 			if strings.TrimSpace(output) != "" {
@@ -515,13 +595,11 @@ func (s *DeployService) uploadAndRestartSequential(ctx context.Context, env *ent
 		} else {
 			logger.Info("%s: 未启用重启或未配置脚本，跳过", stagePrefix)
 		}
-
-		client.Close()
 	}
 
+	_ = builtFiles
 	return nil
 }
-
 func (s *DeployService) deployFrontend(ctx context.Context, env *entity.Environment) (string, error) {
 	s.updateStepStatus("前端打包", entity.StepStatusRunning, "执行 npm run build")
 	if err := s.runNpmBuild(ctx, env.ProjectRoot); err != nil {
@@ -539,6 +617,10 @@ func (s *DeployService) deployFrontend(ctx context.Context, env *entity.Environm
 	}
 	s.updateStepStatus("压缩 dist", entity.StepStatusSuccess, filepath.Base(zipPath))
 	s.updateProgress(50)
+
+	if err := s.cleanupLocalDistBeforeUpload(env.ProjectRoot); err != nil {
+		logger.Warn("清理本地 dist 目录失败: %v", err)
+	}
 
 	target := pickFrontendTarget(env)
 
@@ -582,6 +664,21 @@ func (s *DeployService) runNpmBuild(ctx context.Context, projectRoot string) err
 		return fmt.Errorf("项目根目录不存在: %s", projectRoot)
 	}
 
+	distDir := filepath.Join(projectRoot, "dist")
+	if _, err := os.Stat(distDir); err == nil {
+		if err := os.RemoveAll(distDir); err != nil {
+			return fmt.Errorf("清理旧 dist 目录失败: %v", err)
+		}
+		logger.Info("已清理旧 dist 目录: %s", distDir)
+	}
+	zipPath := filepath.Join(projectRoot, "dist.zip")
+	if _, err := os.Stat(zipPath); err == nil {
+		if err := os.Remove(zipPath); err != nil {
+			return fmt.Errorf("清理旧 dist.zip 失败: %v", err)
+		}
+		logger.Info("已清理旧 dist.zip: %s", zipPath)
+	}
+
 	if _, err := exec.LookPath("npm"); err != nil {
 		return fmt.Errorf("未找到 npm 可执行文件")
 	}
@@ -591,6 +688,12 @@ func (s *DeployService) runNpmBuild(ctx context.Context, projectRoot string) err
 
 	cmd := exec.CommandContext(ctx, "npm", "run", "build")
 	cmd.Dir = projectRoot
+	if runtime.GOOS == "windows" {
+		cmd.SysProcAttr = &syscall.SysProcAttr{
+			CreationFlags: 0x08000000, // CREATE_NO_WINDOW
+			HideWindow:    true,
+		}
+	}
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -643,6 +746,17 @@ func (s *DeployService) zipFrontendDist(projectRoot string) (string, error) {
 	return zipPath, nil
 }
 
+func (s *DeployService) cleanupLocalDistBeforeUpload(projectRoot string) error {
+	distDir := filepath.Join(projectRoot, "dist")
+	if _, err := os.Stat(distDir); err == nil {
+		if err := os.RemoveAll(distDir); err != nil {
+			return err
+		}
+		logger.Info("发送到云端前已清理本地 dist 目录: %s", distDir)
+	}
+	return nil
+}
+
 func (s *DeployService) deployFrontendToServers(ctx context.Context, env *entity.Environment, zipPath string, target entity.TargetFile) error {
 	if len(env.Servers) == 0 {
 		return fmt.Errorf("未配置任何服务器")
@@ -668,8 +782,8 @@ func (s *DeployService) deployFrontendToServers(ctx context.Context, env *entity
 		}
 
 		logger.Info("%s: 上传 dist.zip -> %s:%s/%s", stagePrefix, server.Host, baseDir, remoteName)
-		s.progress.CurrentFile = zipPath
-		s.progress.FileProgress = 0
+		s.setCurrentFile(zipPath)
+		s.setFileProgress(0, "")
 		start := time.Now()
 		var lastReport time.Time
 		onProgress := func(written, total int64) {
@@ -677,22 +791,24 @@ func (s *DeployService) deployFrontendToServers(ctx context.Context, env *entity
 			if total > 0 {
 				percent = int((written * 100) / total)
 			}
-			s.progress.FileProgress = percent
+			s.setFileProgress(percent, "")
 			now := time.Now()
 			if lastReport.IsZero() || now.Sub(lastReport) > 500*time.Millisecond {
 				elapsed := now.Sub(start).Seconds()
 				if elapsed > 0 {
 					speed := float64(written) / 1024.0 / 1024.0 / elapsed
-					s.progress.Speed = fmt.Sprintf("%.2f MB/s", speed)
+					s.setFileProgress(percent, fmt.Sprintf("%.2f MB/s", speed))
 				}
 				lastReport = now
 			}
 		}
-		if err := client.UploadFileWithProgress(zipPath, baseDir, remoteName, onProgress); err != nil {
+		uploadTimeout := s.getUploadTimeout(env)
+		idleTimeout := s.getUploadIdleTimeout(uploadTimeout)
+		if err := client.UploadFileWithProgressCtx(ctx, zipPath, baseDir, remoteName, onProgress, idleTimeout, uploadTimeout); err != nil {
 			client.Close()
 			return fmt.Errorf("%s: 上传失败: %v", stagePrefix, err)
 		}
-		s.progress.FileProgress = 100
+		s.setFileProgress(100, "")
 
 		backupCmd := fmt.Sprintf("set -e\ncd %s\nTS=$(date +%%Y%%m%%d%%H%%M%%S)\nif [ -d dist ]; then mv dist dist.${TS}.bak; fi", shellQuote(baseDir))
 		backupCmd = wrapSudo(backupCmd, server.UseSudo)
@@ -797,6 +913,41 @@ func shouldExpandRestartScriptPath(script string) bool {
 	return false
 }
 
+func (s *DeployService) getUploadTimeout(env *entity.Environment) time.Duration {
+	if env != nil && env.Timeout > 0 {
+		return time.Duration(env.Timeout) * time.Second
+	}
+	if s.cfgService != nil {
+		if t := s.cfgService.GetSettings().DefaultTimeout; t > 0 {
+			return time.Duration(t) * time.Second
+		}
+	}
+	return 10 * time.Minute
+}
+
+func (s *DeployService) getUploadIdleTimeout(total time.Duration) time.Duration {
+	if total <= 0 {
+		return 60 * time.Second
+	}
+	idle := total / 6
+	if idle < 30*time.Second {
+		idle = 30 * time.Second
+	}
+	if idle > 2*time.Minute {
+		idle = 2 * time.Minute
+	}
+	return idle
+}
+
+func (s *DeployService) getProgressStartTime() int64 {
+	s.progressMu.RLock()
+	defer s.progressMu.RUnlock()
+	if s.progress == nil {
+		return time.Now().Unix()
+	}
+	return s.progress.StartTime
+}
+
 func (s *DeployService) TryAddHistoryLog(level, message string) {
 	if s.historyService == nil || s.currentHistoryID == "" {
 		return
@@ -804,24 +955,69 @@ func (s *DeployService) TryAddHistoryLog(level, message string) {
 	_ = s.historyService.AddLog(s.currentHistoryID, level, message)
 }
 
-func (s *DeployService) Cancel() {
+func (s *DeployService) Cancel() error {
+	s.progressMu.RLock()
+	var currentStep, status string
+	var historyID string
+	if s.progress != nil {
+		currentStep = s.progress.CurrentStep
+		status = s.progress.Status
+	}
+	historyID = s.currentHistoryID
+	s.progressMu.RUnlock()
+
+	if status != entity.DeployStatusRunning {
+		return nil // nothing to cancel
+	}
+
+	if currentStep != "Maven 打包" {
+		if currentStep == "" {
+			return fmt.Errorf("当前没有正在执行的步骤，暂不支持取消")
+		}
+		return fmt.Errorf("当前阶段「%s」不支持取消，请等待当前步骤完成", currentStep)
+	}
+
+	// Kill Maven and cancel the deployment context.
+	s.mavenBuild.Cancel()
 	if s.cancelFunc != nil {
 		s.cancelFunc()
 	}
-	s.mavenBuild.Cancel()
+
+	// Mark progress as canceled and emit a final event.
+	s.progressMu.Lock()
 	if s.progress != nil {
 		s.progress.Status = entity.DeployStatusCanceled
+		s.progress.EndTime = time.Now().Unix()
+		s.touchProgressLocked()
 	}
+	s.progressMu.Unlock()
+
+	if s.historyService != nil && historyID != "" {
+		s.historyService.Update(historyID, "canceled", "", 0, "用户取消")
+	}
+	return nil
 }
 
 func (s *DeployService) GetProgress() *entity.DeployProgress {
-	return s.progress
+	s.progressMu.RLock()
+	defer s.progressMu.RUnlock()
+	if s.progress == nil {
+		return nil
+	}
+	cp := *s.progress
+	if s.progress.Steps != nil {
+		cp.Steps = append([]entity.StepProgress(nil), s.progress.Steps...)
+	}
+	return &cp
 }
 
 func (s *DeployService) updateProgressStatus(status string, message string) {
+	s.progressMu.Lock()
+	defer s.progressMu.Unlock()
 	if s.progress == nil {
 		return
 	}
+	s.touchProgressLocked()
 	s.progress.Status = status
 	if status == entity.DeployStatusFailed {
 		s.progress.ErrorMessage = message
@@ -834,9 +1030,12 @@ func (s *DeployService) updateProgressStatus(status string, message string) {
 }
 
 func (s *DeployService) updateProgress(percent int) {
+	s.progressMu.Lock()
+	defer s.progressMu.Unlock()
 	if s.progress == nil {
 		return
 	}
+	s.touchProgressLocked()
 	if percent > 100 {
 		percent = 100
 	}
@@ -847,9 +1046,12 @@ func (s *DeployService) updateProgress(percent int) {
 }
 
 func (s *DeployService) updateStepStatus(stepName string, status string, message string) {
+	s.progressMu.Lock()
+	defer s.progressMu.Unlock()
 	if s.progress == nil {
 		return
 	}
+	s.touchProgressLocked()
 
 	found := false
 	for i, step := range s.progress.Steps {
@@ -862,12 +1064,87 @@ func (s *DeployService) updateStepStatus(stepName string, status string, message
 	}
 
 	if !found {
-		s.progress.Steps = append(s.progress.Steps, entity.StepProgress{
+		newStep := entity.StepProgress{
 			Name:    stepName,
 			Status:  status,
 			Message: message,
-		})
+		}
+		if strings.HasPrefix(stepName, "发送文件:") {
+			insertIdx := -1
+			for i, step := range s.progress.Steps {
+				if step.Name == "远程重启" {
+					insertIdx = i
+					break
+				}
+			}
+			if insertIdx >= 0 {
+				s.progress.Steps = append(s.progress.Steps, entity.StepProgress{})
+				copy(s.progress.Steps[insertIdx+1:], s.progress.Steps[insertIdx:])
+				s.progress.Steps[insertIdx] = newStep
+			} else {
+				s.progress.Steps = append(s.progress.Steps, newStep)
+			}
+		} else {
+			s.progress.Steps = append(s.progress.Steps, newStep)
+		}
 	}
 
 	s.progress.CurrentStep = stepName
 }
+
+func (s *DeployService) setCurrentFile(path string) {
+	s.progressMu.Lock()
+	defer s.progressMu.Unlock()
+	if s.progress == nil {
+		return
+	}
+	s.touchProgressLocked()
+	s.progress.CurrentFile = path
+}
+
+func (s *DeployService) setFileProgress(percent int, speed string) {
+	s.progressMu.Lock()
+	defer s.progressMu.Unlock()
+	if s.progress == nil {
+		return
+	}
+	if percent > 100 {
+		percent = 100
+	}
+	if percent < 0 {
+		percent = 0
+	}
+	s.touchProgressLocked()
+	s.progress.FileProgress = percent
+	if speed != "" {
+		s.progress.Speed = speed
+	}
+}
+
+func (s *DeployService) touchProgressLocked() {
+	if s.progress == nil {
+		return
+	}
+	s.progress.Version++
+	// Update elapsed seconds so the frontend timer stays accurate without polling.
+	if s.progress.StartTime > 0 {
+		if s.progress.EndTime > 0 {
+			s.progress.ElapsedSeconds = s.progress.EndTime - s.progress.StartTime
+		} else {
+			s.progress.ElapsedSeconds = time.Now().Unix() - s.progress.StartTime
+		}
+	}
+	// Signal that progress changed so the emitter goroutine can push an event.
+	// Non-blocking: if the channel is already full the previous signal hasn't
+	// been consumed yet, which is fine – the goroutine will emit once and pick
+	// up the very latest state at that moment.
+	select {
+	case s.progressEmitCh <- struct{}{}:
+	default:
+	}
+}
+
+
+
+
+

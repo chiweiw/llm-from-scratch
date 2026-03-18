@@ -20,8 +20,20 @@ export const useDeployStore = defineStore("deploy", {
       this.selectedJarIds = jarIds;
     },
 
+    // Called by the deploy-progress Wails event handler and by fetchProgress.
+    setProgress(progress: DeployProgress | null) {
+      this.progress = progress;
+      if (
+        progress &&
+        ["success", "failed", "canceled"].includes(progress.status)
+      ) {
+        this.isDeploying = false;
+      }
+    },
+
     async startDeploy(envId: string) {
       this.isDeploying = true;
+      this.progress = null;
       const { StartDeploy } = await import("../../wailsjs/go/app/App");
       const resp = await StartDeploy({
         environmentId: envId,
@@ -35,19 +47,21 @@ export const useDeployStore = defineStore("deploy", {
 
     async cancelDeploy() {
       const { CancelDeploy } = await import("../../wailsjs/go/app/App");
-      await CancelDeploy();
+      const resp = await CancelDeploy();
+      if (resp.code !== 0) {
+        throw new Error(resp.message || "取消失败");
+      }
       this.isDeploying = false;
     },
 
+    // Pulls the current progress once (used on mount to recover in-progress state).
     async fetchProgress() {
       const { GetDeployProgress } = await import("../../wailsjs/go/app/App");
       const resp = await GetDeployProgress();
-      this.progress = resp.code === 0 ? resp.data : null;
-      if (
-        this.progress &&
-        ["success", "failed", "canceled"].includes(this.progress.status)
-      ) {
-        this.isDeploying = false;
+      const p = resp.code === 0 ? (resp.data as DeployProgress | null) : null;
+      this.setProgress(p);
+      if (p && p.status === "running") {
+        this.isDeploying = true;
       }
     },
   },

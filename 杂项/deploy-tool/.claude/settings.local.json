@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd \"D:/pyproject/llm-from-scratch/杂项/deploy-tool\" && go build ./... 2>&1)",
+      "Bash(cd \"D:/pyproject/llm-from-scratch/杂项/deploy-tool/frontend\" && npm run type-check 2>&1)",
+      "Bash(\\\\ sed:*)",
+      "Bash(npm run:*)",
+      "Bash(\\\\ echo:*)",
+      "Bash(cd /d/pyproject/llm-from-scratch/杂项/deploy-tool && go build ./... 2>&1)",
+      "Bash(cd \"D:\\\\pyproject\\\\llm-from-scratch\\\\杂项\\\\deploy-tool\" && go build ./... 2>&1)"
+    ]
+  }
+}

@@ -11,6 +11,7 @@ export const useSettingsStore = defineStore("settings", () => {
     notifyOnComplete: false,
     cloudDeploy: false,
     offlineBuild: true,
+    lightLog: true,
     theme: "",
     language: "",
   });

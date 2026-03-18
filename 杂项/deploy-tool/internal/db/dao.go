@@ -85,7 +85,7 @@ func NewEnvironmentDAO(database *Database) EnvironmentDAO {
 func (d *environmentDAO) GetAll() ([]Environment, error) {
 	query := `SELECT id, name, identifier, description, project_root, build_type, cloud_deploy, 
 			  timeout, check_status, created_at, updated_at 
-			  FROM environments ORDER BY created_at DESC`
+			  FROM environments ORDER BY created_at ASC, id ASC`
 
 	rows, err := d.db.Query(query)
 	if err != nil {

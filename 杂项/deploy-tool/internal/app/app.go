@@ -8,15 +8,25 @@ import (
 	"deploy-tool/internal/model/response"
 	"deploy-tool/internal/service"
 	"deploy-tool/internal/utils"
+	"sync"
 
 	wailsRuntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
+
+type logEventPayload struct {
+	level   string
+	message string
+	ts      string
+	line    string
+}
 
 type App struct {
 	ctx           context.Context
 	configService *service.ConfigService
 	deployService *service.DeployService
 	history       *service.HistoryService
+	logQueue      chan logEventPayload
+	dispatchOnce  sync.Once
 }
 
 func New(cfg *service.ConfigService, deploy *service.DeployService, history *service.HistoryService) *App {
@@ -33,20 +43,65 @@ func (a *App) SetDeployService(deploy *service.DeployService) {
 
 func (a *App) Startup(ctx context.Context) {
 	a.ctx = ctx
+	a.startLogDispatcher()
 
 	logger.SetEventEmitter(func(level string, message string, ts string, line string) {
+		a.enqueueLogEvent(logEventPayload{
+			level:   level,
+			message: message,
+			ts:      ts,
+			line:    line,
+		})
+	})
+
+	// Register progress event emitter so DeployService can push deploy-progress
+	// events to the frontend without polling.
+	a.deployService.SetProgressEmitter(func(p *entity.DeployProgress) {
 		if a.ctx != nil {
-			wailsRuntime.EventsEmit(a.ctx, "log-event", map[string]string{
-				"level":   level,
-				"message": message,
-				"ts":      ts,
-				"line":    line,
-			})
-		}
-		if a.deployService != nil {
-			a.deployService.TryAddHistoryLog(level, message)
+			wailsRuntime.EventsEmit(a.ctx, "deploy-progress", p)
 		}
 	})
+}
+
+func (a *App) startLogDispatcher() {
+	a.dispatchOnce.Do(func() {
+		if a.logQueue == nil {
+			a.logQueue = make(chan logEventPayload, 200)
+		}
+		go func() {
+			for item := range a.logQueue {
+				if a.ctx != nil {
+					wailsRuntime.EventsEmit(a.ctx, "log-event", map[string]string{
+						"level":   item.level,
+						"message": item.message,
+						"ts":      item.ts,
+						"line":    item.line,
+					})
+				}
+				if a.deployService != nil {
+					a.deployService.TryAddHistoryLog(item.level, item.message)
+				}
+			}
+		}()
+	})
+}
+
+func (a *App) enqueueLogEvent(item logEventPayload) {
+	if a.logQueue == nil {
+		return
+	}
+	select {
+	case a.logQueue <- item:
+	default:
+		select {
+		case <-a.logQueue:
+		default:
+		}
+		select {
+		case a.logQueue <- item:
+		default:
+		}
+	}
 }
 
 func (a *App) GetEnvironments() response.Data[[]entity.Environment] {
@@ -94,6 +149,21 @@ func (a *App) CheckEnvironment(req request.CheckEnvironment) response.Data[*enti
 	}
 	defaults := a.configService.GetSystemDefaults()
 	result := service.CheckEnvironment(env, defaults)
+
+	if result != nil && env != nil {
+		status := entity.CheckStatusFail
+		if result.Success {
+			status = entity.CheckStatusPass
+			for _, item := range result.Checks {
+				if item.Status == entity.CheckStatusWarning {
+					status = entity.CheckStatusWarning
+					break
+				}
+			}
+		}
+		env.CheckStatus = status
+		_ = a.configService.UpsertEnvironment(*env)
+	}
 	return response.OKData(result)
 }
 
@@ -108,7 +178,9 @@ func (a *App) StartDeploy(req request.StartDeploy) response.Base {
 }
 
 func (a *App) CancelDeploy() response.Base {
-	a.deployService.Cancel()
+	if err := a.deployService.Cancel(); err != nil {
+		return response.Fail(err.Error())
+	}
 	return response.OK()
 }
 

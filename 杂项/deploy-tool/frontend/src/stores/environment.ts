@@ -38,6 +38,17 @@ export const useEnvironmentStore = defineStore("environment", () => {
     }
   }
 
+  function applyStableOrder(list: Environment[], order: string[]): Environment[] {
+    const indexMap = new Map(order.map((id, idx) => [id, idx]));
+    return [...list].sort((a, b) => {
+      const ai = indexMap.get(a.id);
+      const bi = indexMap.get(b.id);
+      const aIndex = ai === undefined ? Number.MAX_SAFE_INTEGER : ai;
+      const bIndex = bi === undefined ? Number.MAX_SAFE_INTEGER : bi;
+      return aIndex - bIndex;
+    });
+  }
+
   async function saveEnvironment(env: Environment) {
     saving.value = true;
     try {

@@ -129,7 +129,9 @@ export namespace entity {
 	    speed: string;
 	    startTime: number;
 	    endTime: number;
+	    elapsedSeconds: number;
 	    errorMessage: string;
+	    version: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new DeployProgress(source);
@@ -147,7 +149,9 @@ export namespace entity {
 	        this.speed = source["speed"];
 	        this.startTime = source["startTime"];
 	        this.endTime = source["endTime"];
+	        this.elapsedSeconds = source["elapsedSeconds"];
 	        this.errorMessage = source["errorMessage"];
+	        this.version = source["version"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -280,6 +284,7 @@ export namespace entity {
 	    notifyOnComplete: boolean;
 	    cloudDeploy: boolean;
 	    offlineBuild: boolean;
+	    lightLog: boolean;
 	    theme: string;
 	    language: string;
 	
@@ -296,6 +301,7 @@ export namespace entity {
 	        this.notifyOnComplete = source["notifyOnComplete"];
 	        this.cloudDeploy = source["cloudDeploy"];
 	        this.offlineBuild = source["offlineBuild"];
+	        this.lightLog = source["lightLog"];
 	        this.theme = source["theme"];
 	        this.language = source["language"];
 	    }

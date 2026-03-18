@@ -1,17 +1,19 @@
 package entity
 
 type DeployProgress struct {
-	EnvironmentID string         `json:"environmentId"`
-	Status        string         `json:"status"`
-	CurrentStep   string         `json:"currentStep"`
-	TotalProgress int            `json:"totalProgress"`
-	Steps         []StepProgress `json:"steps"`
-	CurrentFile   string         `json:"currentFile"`
-	FileProgress  int            `json:"fileProgress"`
-	Speed         string         `json:"speed"`
-	StartTime     int64          `json:"startTime"`
-	EndTime       int64          `json:"endTime"`
-	ErrorMessage  string         `json:"errorMessage"`
+	EnvironmentID  string         `json:"environmentId"`
+	Status         string         `json:"status"`
+	CurrentStep    string         `json:"currentStep"`
+	TotalProgress  int            `json:"totalProgress"`
+	Steps          []StepProgress `json:"steps"`
+	CurrentFile    string         `json:"currentFile"`
+	FileProgress   int            `json:"fileProgress"`
+	Speed          string         `json:"speed"`
+	StartTime      int64          `json:"startTime"`
+	EndTime        int64          `json:"endTime"`
+	ElapsedSeconds int64          `json:"elapsedSeconds"`
+	ErrorMessage   string         `json:"errorMessage"`
+	Version        int64          `json:"version"`
 }
 
 type StepProgress struct {

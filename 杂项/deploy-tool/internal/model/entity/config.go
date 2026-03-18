@@ -8,6 +8,7 @@ type GlobalSettings struct {
 	NotifyOnComplete bool   `json:"notifyOnComplete"`
 	CloudDeploy      bool   `json:"cloudDeploy"`
 	OfflineBuild     bool   `json:"offlineBuild"`
+	LightLog         bool   `json:"lightLog"`
 	Theme            string `json:"theme"`
 	Language         string `json:"language"`
 }

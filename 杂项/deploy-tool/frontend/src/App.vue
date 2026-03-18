@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from "vue-i18n";
 import { useRoute } from "vue-router";
+import { FolderOpen, Rocket, History, Settings } from "lucide-vue-next";
 
 const { availableLocales: languages, locale } = useI18n();
 const route = useRoute();
@@ -10,46 +11,77 @@ const onclickLanguageHandle = (item: string) => {
 };
 
 const navItems = [
-  { path: "/", name: "环境管理", icon: "📁" },
-  { path: "/deploy", name: "部署中心", icon: "🚀" },
-  { path: "/history", name: "历史记录", icon: "📋" },
-  { path: "/settings", name: "系统设置", icon: "⚙️" },
+  { path: "/", name: "环境管理", icon: FolderOpen },
+  { path: "/deploy", name: "部署中心", icon: Rocket },
+  { path: "/history", name: "历史记录", icon: History },
+  { path: "/settings", name: "系统设置", icon: Settings },
 ];
 </script>
 
 <template>
   <div class="flex h-screen bg-background text-foreground">
-    <aside class="w-64 border-r bg-card flex flex-col shadow-lg z-10">
-      <div class="p-6 border-b flex items-center justify-center">
-        <h1 class="text-xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">简易发包工具 v2.0</h1>
+    <!-- Sidebar -->
+    <aside class="w-72 border-r bg-card flex flex-col shrink-0">
+      <!-- Logo -->
+      <div class="px-6 py-6 border-b">
+        <div class="flex items-center gap-4">
+          <div
+            class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/75 flex items-center justify-center shrink-0 shadow-sm"
+          >
+            <Rocket :size="20" class="text-primary-foreground" />
+          </div>
+          <div>
+            <div class="text-base font-bold leading-tight">简易发包工具</div>
+            <div class="text-xs text-muted-foreground mt-0.5">Deployment Tool v2.0</div>
+          </div>
+        </div>
       </div>
-      <nav class="flex-1 px-4 py-8 flex flex-col gap-6">
+
+      <!-- Navigation -->
+      <nav class="flex-1 p-4 space-y-1">
+        <div class="px-3 pb-3 pt-1">
+          <span class="text-xs font-semibold uppercase tracking-widest text-muted-foreground/50">导航</span>
+        </div>
         <router-link
           v-for="item in navItems"
           :key="item.path"
           :to="item.path"
-          class="flex items-center gap-4 px-6 py-4 rounded-xl text-base font-medium transition-all duration-300 group relative"
+          class="group relative flex items-center gap-3 px-3 py-3 rounded-xl text-sm transition-all duration-200"
           :class="[
             route.path === item.path
-              ? 'bg-primary text-primary-foreground shadow-lg scale-105'
-              : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground hover:translate-x-1',
+              ? 'bg-primary text-primary-foreground font-medium shadow-md shadow-primary/20'
+              : 'font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground',
           ]"
         >
-          <span class="text-2xl group-hover:scale-110 transition-transform duration-300">{{ item.icon }}</span>
-          <span class="tracking-wide">{{ item.name }}</span>
+          <div
+            class="flex items-center justify-center w-6 h-6 shrink-0 transition-all duration-200"
+            :class="[
+              route.path === item.path
+                ? 'text-primary-foreground'
+                : 'text-muted-foreground group-hover:text-foreground',
+            ]"
+          >
+            <component :is="item.icon" :size="18" />
+          </div>
+          <span>{{ item.name }}</span>
         </router-link>
       </nav>
-      <div class="p-6 border-t bg-card/50 flex justify-center">
-        <div class="flex gap-2 p-1 bg-background/50 rounded-lg">
+
+      <!-- Language switcher -->
+      <div class="px-6 pb-6 pt-4 border-t">
+        <div class="px-1 mb-2">
+          <span class="text-xs font-semibold uppercase tracking-widest text-muted-foreground/50">Language</span>
+        </div>
+        <div class="flex p-1.5 bg-muted rounded-xl">
           <button
             v-for="item in languages"
             :key="item"
             @click="onclickLanguageHandle(item)"
-            class="px-4 py-1.5 text-xs font-medium rounded-md transition-all duration-200"
+            class="flex-1 py-2 text-xs font-medium rounded-lg transition-all duration-200"
             :class="[
               item === locale
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground',
             ]"
           >
             {{ item === "zh-Hans" ? "中文" : "EN" }}
@@ -58,8 +90,9 @@ const navItems = [
       </div>
     </aside>
 
-    <main class="flex-1 flex flex-col overflow-hidden">
-      <div class="flex-1 overflow-auto">
+    <!-- Main content -->
+    <main class="flex-1 overflow-hidden">
+      <div class="h-full overflow-auto">
         <router-view v-slot="{ Component }">
           <keep-alive>
             <component :is="Component" />

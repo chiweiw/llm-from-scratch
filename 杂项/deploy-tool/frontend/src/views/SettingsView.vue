@@ -52,6 +52,7 @@ function resetToDefaults() {
     notifyOnComplete: false,
     cloudDeploy: false,
     offlineBuild: true,
+    lightLog: true,
     theme: "",
     language: "",
   };
@@ -182,14 +183,14 @@ function selectJdk(jdk: { path: string; source: string }) {
         </div>
         <div class="flex gap-3">
           <button
-            class="rounded-md border px-4 py-2 text-sm font-medium transition-all hover:bg-accent hover:shadow-sm"
+            class="rounded-md border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 shadow-sm transition-all hover:bg-blue-100 hover:shadow-md hover:-translate-y-0.5"
             @click="resetToDefaults"
             type="button"
           >
             重置
           </button>
           <button
-            class="rounded-md bg-primary px-5 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-primary/90 hover:shadow-md hover:-translate-y-0.5"
+            class="rounded-md bg-gradient-to-r from-blue-600 to-cyan-500 px-5 py-2 text-sm font-semibold text-white shadow-md transition-all hover:from-blue-700 hover:to-cyan-600 hover:shadow-lg hover:-translate-y-0.5"
             @click="saveSettings"
             :disabled="settingsStore.saving"
             type="button"
@@ -199,39 +200,38 @@ function selectJdk(jdk: { path: string; source: string }) {
         </div>
       </div>
 
-      <div class="border-b">
-        <nav class="-mb-px flex space-x-4">
-          <button
-            class="whitespace-nowrap border-b-2 px-1 py-4 text-sm font-medium"
-            :class="
-              activeTab === 'general'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            "
-            @click.prevent="activeTab = 'general'"
-            type="button"
-          >
-            通用设置
-          </button>
-          <button
-            class="whitespace-nowrap border-b-2 px-1 py-4 text-sm font-medium"
-            :class="
-              activeTab === 'defaults'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            "
-            @click.prevent="activeTab = 'defaults'"
-            type="button"
-          >
-            默认配置
-          </button>
-        </nav>
+      <!-- Tab switcher — segmented control style -->
+      <div class="flex p-1 bg-muted rounded-xl gap-1">
+        <button
+          class="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-150"
+          :class="
+            activeTab === 'general'
+              ? 'bg-background text-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground'
+          "
+          @click.prevent="activeTab = 'general'"
+          type="button"
+        >
+          通用设置
+        </button>
+        <button
+          class="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-150"
+          :class="
+            activeTab === 'defaults'
+              ? 'bg-background text-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground'
+          "
+          @click.prevent="activeTab = 'defaults'"
+          type="button"
+        >
+          默认配置
+        </button>
       </div>
 
       <div v-show="activeTab === 'general'" class="space-y-4">
         <div class="rounded-md border p-4">
           <h3 class="text-lg font-medium">部署设置</h3>
-          <p class="mb-4 text-sm text-gray-500">配置部署相关的全局参数</p>
+          <p class="mb-4 text-sm text-muted-foreground">配置部署相关的全局参数</p>
           <div class="space-y-4">
             <div class="grid grid-cols-2 gap-4">
               <div>
@@ -241,7 +241,7 @@ function selectJdk(jdk: { path: string; source: string }) {
                 <input
                   v-model.number="settingsStore.globalSettings.defaultTimeout"
                   type="number"
-                  class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                  class="mt-1 block w-full rounded-md border border-input px-3 py-2"
                   placeholder="600"
                 />
               </div>
@@ -250,18 +250,18 @@ function selectJdk(jdk: { path: string; source: string }) {
                 <input
                   v-model.number="settingsStore.globalSettings.logRetentionDays"
                   type="number"
-                  class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                  class="mt-1 block w-full rounded-md border border-input px-3 py-2"
                   placeholder="30"
                 />
               </div>
             </div>
             <div class="grid grid-cols-2 gap-4">
               <div
-                class="flex items-center justify-between rounded-md border border-gray-200 p-3"
+                class="flex items-center justify-between rounded-md border border-border p-3"
               >
                 <div>
                   <div class="text-sm font-medium">部署前自动备份</div>
-                  <div class="text-xs text-gray-500">
+                  <div class="text-xs text-muted-foreground">
                     上传前先备份服务器上的旧文件
                   </div>
                 </div>
@@ -272,17 +272,17 @@ function selectJdk(jdk: { path: string; source: string }) {
                     v-model="settingsStore.globalSettings.backupEnabled"
                   />
                   <div
-                    class="h-6 w-11 rounded-full bg-gray-200 peer-checked:bg-blue-500 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-5"
+                    class="h-6 w-11 rounded-full bg-input peer-checked:bg-primary after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-5"
                   ></div>
                 </label>
               </div>
 
               <div
-                class="flex items-center justify-between rounded-md border border-gray-200 p-3"
+                class="flex items-center justify-between rounded-md border border-border p-3"
               >
                 <div>
                   <div class="text-sm font-medium">云端部署（默认）</div>
-                  <div class="text-xs text-gray-500">
+                  <div class="text-xs text-muted-foreground">
                     开启后将上传文件并执行远程操作
                   </div>
                 </div>
@@ -293,17 +293,17 @@ function selectJdk(jdk: { path: string; source: string }) {
                     v-model="settingsStore.globalSettings.cloudDeploy"
                   />
                   <div
-                    class="h-6 w-11 rounded-full bg-gray-200 peer-checked:bg-blue-500 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-5"
+                    class="h-6 w-11 rounded-full bg-input peer-checked:bg-primary after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-5"
                   ></div>
                 </label>
               </div>
 
               <div
-                class="flex items-center justify-between rounded-md border border-gray-200 p-3"
+                class="flex items-center justify-between rounded-md border border-border p-3"
               >
                 <div>
                   <div class="text-sm font-medium">离线打包（默认）</div>
-                  <div class="text-xs text-gray-500">
+                  <div class="text-xs text-muted-foreground">
                     Maven 添加 -o/--offline，不访问远程仓库
                   </div>
                 </div>
@@ -314,17 +314,36 @@ function selectJdk(jdk: { path: string; source: string }) {
                     v-model="settingsStore.globalSettings.offlineBuild"
                   />
                   <div
-                    class="h-6 w-11 rounded-full bg-gray-200 peer-checked:bg-blue-500 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-5"
+                    class="h-6 w-11 rounded-full bg-input peer-checked:bg-primary after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-5"
                   ></div>
                 </label>
               </div>
 
               <div
-                class="flex items-center justify-between rounded-md border border-gray-200 p-3"
+                class="flex items-center justify-between rounded-md border border-border p-3"
+              >
+                <div>
+                  <div class="text-sm font-medium">轻量日志（默认）</div>
+                  <div class="text-xs text-muted-foreground">减少日志输出，提升部署性能</div>
+                </div>
+                <label class="relative inline-flex cursor-pointer items-center">
+                  <input
+                    type="checkbox"
+                    class="peer sr-only"
+                    v-model="settingsStore.globalSettings.lightLog"
+                  />
+                  <div
+                    class="h-6 w-11 rounded-full bg-input peer-checked:bg-primary after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-5"
+                  ></div>
+                </label>
+              </div>
+
+              <div
+                class="flex items-center justify-between rounded-md border border-border p-3"
               >
                 <div>
                   <div class="text-sm font-medium">部署完成后发送通知</div>
-                  <div class="text-xs text-gray-500">
+                  <div class="text-xs text-muted-foreground">
                     部署成功或失败后发送提醒
                   </div>
                 </div>
@@ -335,7 +354,7 @@ function selectJdk(jdk: { path: string; source: string }) {
                     v-model="settingsStore.globalSettings.notifyOnComplete"
                   />
                   <div
-                    class="h-6 w-11 rounded-full bg-gray-200 peer-checked:bg-blue-500 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-5"
+                    class="h-6 w-11 rounded-full bg-input peer-checked:bg-primary after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-5"
                   ></div>
                 </label>
               </div>
@@ -345,14 +364,14 @@ function selectJdk(jdk: { path: string; source: string }) {
 
         <!-- <div class="rounded-md border p-4">
           <h3 class="text-lg font-medium">外观设置</h3>
-          <p class="mb-4 text-sm text-gray-500">配置应用程序的外观和语言</p>
+          <p class="mb-4 text-sm text-muted-foreground">配置应用程序的外观和语言</p>
           <div class="space-y-4">
             <div class="grid grid-cols-2 gap-4">
               <div>
                 <label class="block text-sm font-medium">主题</label>
                 <select
                   v-model="settingsStore.globalSettings.theme"
-                  class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                  class="mt-1 block w-full rounded-md border border-input px-3 py-2"
                 >
                   <option value="light">浅色</option>
                   <option value="dark">深色</option>
@@ -363,7 +382,7 @@ function selectJdk(jdk: { path: string; source: string }) {
                 <label class="block text-sm font-medium">语言</label>
                 <select
                   v-model="settingsStore.globalSettings.language"
-                  class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                  class="mt-1 block w-full rounded-md border border-input px-3 py-2"
                 >
                   <option value="zh-Hans">简体中文</option>
                   <option value="zh-Hant">繁體中文</option>
@@ -378,14 +397,14 @@ function selectJdk(jdk: { path: string; source: string }) {
       <div v-show="activeTab === 'defaults'" class="space-y-4">
         <div class="rounded-md border p-4">
           <h3 class="text-lg font-medium">Maven 命令解析</h3>
-          <p class="mb-4 text-sm text-gray-500">
+          <p class="mb-4 text-sm text-muted-foreground">
             从 IDEA 的 Maven 工具窗口复制命令粘贴到下方解析
           </p>
           <div class="space-y-3">
             <div>
               <textarea
                 v-model="mavenCommandInput"
-                class="w-full rounded-md border border-gray-300 px-3 py-2 font-mono text-sm"
+                class="w-full rounded-md border border-input px-3 py-2 font-mono text-sm"
                 rows="3"
                 placeholder='例如: "D:\Program Files\JetBrains\...\mvn.cmd" -Didea.version=2025.3.3 -s "D:\java_tools\apache-maven-3.9.12\conf\settings_sgt0903.xml" -Dmaven.repo.local=D:\m2\repository package -f pom.xml'
               ></textarea>
@@ -411,8 +430,8 @@ function selectJdk(jdk: { path: string; source: string }) {
 
         <div class="rounded-md border p-4">
           <h3 class="text-lg font-medium">系统默认配置</h3>
-          <p class="mb-4 text-sm text-gray-500">新环境创建时的默认配置值</p>
-          <div class="rounded-md bg-yellow-50 p-4 text-sm text-yellow-800 mb-4">
+          <p class="mb-4 text-sm text-muted-foreground">新环境创建时的默认配置值</p>
+          <div class="rounded-md bg-yellow-50 border border-yellow-200 p-4 text-sm text-yellow-800 mb-4">
             <strong>提示：</strong>
             这些配置将作为新创建环境的默认值，但可以单独为每个环境覆盖。
           </div>
@@ -422,7 +441,7 @@ function selectJdk(jdk: { path: string; source: string }) {
               <div class="flex gap-2 mt-1">
                 <input
                   v-model="settingsStore.systemDefaults.jdkPath"
-                  class="flex-1 rounded-md border border-gray-300 px-3 py-2"
+                  class="flex-1 rounded-md border border-input px-3 py-2"
                   placeholder="C:\Program Files\Java\jdk1.8.0_202"
                 />
                 <button
@@ -435,11 +454,11 @@ function selectJdk(jdk: { path: string; source: string }) {
                 </button>
               </div>
               <div v-if="detectedJdks.length > 0" class="mt-2 space-y-1">
-                <p class="text-xs text-gray-500">检测到以下 JDK：</p>
+                <p class="text-xs text-muted-foreground">检测到以下 JDK：</p>
                 <div
                   v-for="jdk in detectedJdks"
                   :key="jdk.path"
-                  class="cursor-pointer rounded bg-gray-100 px-2 py-1 text-xs hover:bg-gray-200"
+                  class="cursor-pointer rounded bg-muted px-2 py-1 text-xs hover:bg-muted"
                   @click="selectJdk(jdk)"
                 >
                   {{ jdk.path }} ({{ jdk.source }})
@@ -459,7 +478,7 @@ function selectJdk(jdk: { path: string; source: string }) {
               <label class="block text-sm font-medium">默认 Maven 路径</label>
               <input
                 v-model="settingsStore.systemDefaults.mavenPath"
-                class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                class="mt-1 block w-full rounded-md border border-input px-3 py-2"
                 placeholder="从上方“解析命令”自动回填"
               />
             </div>
@@ -469,7 +488,7 @@ function selectJdk(jdk: { path: string; source: string }) {
               >
               <input
                 v-model="settingsStore.systemDefaults.mavenSettingsPath"
-                class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                class="mt-1 block w-full rounded-md border border-input px-3 py-2"
                 placeholder="D:\maven\conf\settings.xml"
               />
             </div>
@@ -477,7 +496,7 @@ function selectJdk(jdk: { path: string; source: string }) {
               <label class="block text-sm font-medium">默认本地仓库路径</label>
               <input
                 v-model="settingsStore.systemDefaults.mavenRepoPath"
-                class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                class="mt-1 block w-full rounded-md border border-input px-3 py-2"
                 placeholder="D:\m2\repository"
               />
             </div>
@@ -491,11 +510,11 @@ function selectJdk(jdk: { path: string; source: string }) {
                 >
                   <input
                     v-model="settingsStore.systemDefaults.mavenArgs[idx]"
-                    class="flex-1 rounded-md border border-gray-300 px-3 py-2 font-mono text-sm"
+                    class="flex-1 rounded-md border border-input px-3 py-2 font-mono text-sm"
                     placeholder="参数项"
                   />
                   <button
-                    class="rounded-md border px-3 py-2 text-sm hover:bg-gray-50"
+                    class="rounded-md border px-3 py-2 text-sm hover:bg-muted/50"
                     @click="
                       settingsStore.systemDefaults.mavenArgs.splice(idx, 1)
                     "
@@ -505,7 +524,7 @@ function selectJdk(jdk: { path: string; source: string }) {
                   </button>
                 </div>
                 <button
-                  class="rounded-md border px-3 py-2 text-sm hover:bg-gray-50"
+                  class="rounded-md border px-3 py-2 text-sm hover:bg-muted/50"
                   @click="settingsStore.systemDefaults.mavenArgs.push('')"
                   type="button"
                 >

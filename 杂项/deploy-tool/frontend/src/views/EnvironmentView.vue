@@ -256,7 +256,7 @@ watch(
 
 <template>
   <div class="flex h-full">
-    <aside class="w-72 border-r bg-gray-50 p-4">
+    <aside class="w-72 border-r bg-card p-4">
       <div class="mb-6 flex items-center justify-between">
         <h2 class="text-xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent w-fit pb-1">环境列表</h2>
         <button
@@ -270,8 +270,17 @@ watch(
         <div
           v-for="env in envStore.environments"
           :key="env.id"
-          class="cursor-pointer rounded-md p-3 transition-colors hover:bg-gray-100"
-          :class="{ 'bg-blue-100': editingEnv?.id === env.id }"
+          class="cursor-pointer rounded-md p-3 transition-all duration-200 transform"
+          :class="[
+            'border-l-4',
+            editingEnv?.id === env.id
+              ? env.buildType === 'frontend'
+                ? 'bg-orange-200/60 border border-orange-300 border-l-orange-700 shadow-md translate-x-1'
+                : 'bg-blue-200/60 border border-blue-300 border-l-blue-700 shadow-md translate-x-1'
+              : env.buildType === 'frontend'
+                ? 'bg-white border border-transparent border-l-orange-400 shadow-sm hover:shadow-md hover:translate-x-1'
+                : 'bg-white border border-transparent border-l-blue-400 shadow-sm hover:shadow-md hover:translate-x-1'
+          ]"
           @click="selectEnvironment(env)"
         >
           <div class="flex items-center justify-between">
@@ -288,15 +297,15 @@ watch(
               ></span>
               <div>
                 <div class="font-medium">{{ env.name }}</div>
-                <div class="text-sm text-gray-500">{{ env.identifier }}</div>
+                <div class="text-sm text-muted-foreground">{{ env.identifier }}</div>
               </div>
             </div>
             <div class="text-right">
               <div class="flex items-center justify-end gap-2">
                 <span
-                  class="rounded-full px-2 py-0.5 text-xs"
+                  class="inline-flex w-12 justify-center rounded-full px-2 py-0.5 text-xs"
                   :class="{
-                    'bg-purple-100 text-purple-700':
+                    'bg-orange-100 text-orange-700':
                       env.buildType === 'frontend',
                     'bg-blue-100 text-blue-700':
                       !env.buildType || env.buildType === 'backend',
@@ -305,12 +314,12 @@ watch(
                   {{ env.buildType === "frontend" ? "前端" : "后端" }}
                 </span>
                 <span
-                  class="rounded-full px-2 py-0.5 text-xs"
+                  class="inline-flex w-12 justify-center rounded-full px-2 py-0.5 text-xs"
                   :class="{
                     'bg-green-100 text-green-700': env.identifier === 'dev',
                     'bg-yellow-100 text-yellow-700': env.identifier === 'test',
                     'bg-red-100 text-red-700': env.identifier === 'prod',
-                    'bg-gray-100 text-gray-700': ![
+                    'bg-muted text-muted-foreground': ![
                       'dev',
                       'test',
                       'prod',
@@ -326,7 +335,7 @@ watch(
                   'text-green-600': env.checkStatus === 'pass',
                   'text-yellow-600': env.checkStatus === 'warning',
                   'text-red-600': env.checkStatus === 'error',
-                  'text-gray-400':
+                  'text-muted-foreground/70':
                     !env.checkStatus || env.checkStatus === 'unchecked',
                 }"
               >
@@ -334,7 +343,7 @@ watch(
                   env.checkStatus === "pass"
                     ? "可用"
                     : env.checkStatus === "warning"
-                    ? "有警告"
+                    ? "通过"
                     : env.checkStatus === "error"
                     ? "未通过"
                     : "未自检"
@@ -346,7 +355,7 @@ watch(
       </div>
       <div
         v-if="envStore.environments.length === 0"
-        class="py-8 text-center text-gray-500"
+        class="py-8 text-center text-muted-foreground"
       >
         暂无环境，请添加
       </div>
@@ -355,7 +364,7 @@ watch(
     <main class="flex-1 overflow-y-auto p-6">
       <div
         v-if="!editingEnv"
-        class="flex h-full items-center justify-center text-gray-500"
+        class="flex h-full items-center justify-center text-muted-foreground"
       >
         请选择或创建一个环境
       </div>
@@ -418,7 +427,7 @@ watch(
                 >✗ 检查失败</span
               >
               <svg
-                class="h-4 w-4 text-gray-500 transition-transform"
+                class="h-4 w-4 text-muted-foreground transition-transform"
                 :class="checkResultCollapsed ? '-rotate-90' : ''"
                 fill="none"
                 stroke="currentColor"
@@ -437,7 +446,7 @@ watch(
             <div
               v-for="(item, idx) in envStore.checkResult.checks"
               :key="idx"
-              class="flex items-start gap-2 rounded bg-white p-2 text-sm"
+              class="flex items-start gap-2 rounded bg-card p-2 text-sm"
             >
               <span v-if="item.status === 'pass'" class="mt-0.5 text-green-500"
                 >✓</span
@@ -453,7 +462,7 @@ watch(
                 <div
                   v-if="item.message"
                   :class="
-                    item.status === 'error' ? 'text-red-600' : 'text-gray-600'
+                    item.status === 'error' ? 'text-red-600' : 'text-muted-foreground'
                   "
                 >
                   {{ item.message }}
@@ -469,7 +478,7 @@ watch(
               请根据以上错误信息修改配置后重新自检
             </div>
           </div>
-          <div class="mt-2 text-sm text-gray-600">
+          <div class="mt-2 text-sm text-muted-foreground">
             {{ envStore.checkResult.summary }}
           </div>
         </div>
@@ -480,8 +489,8 @@ watch(
               class="whitespace-nowrap border-b-2 px-1 py-4 text-sm font-medium"
               :class="
                 activeTab === 'basic'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
               "
               @click="activeTab = 'basic'"
             >
@@ -491,8 +500,8 @@ watch(
               class="whitespace-nowrap border-b-2 px-1 py-4 text-sm font-medium"
               :class="
                 activeTab === 'servers'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
               "
               @click="activeTab = 'servers'"
             >
@@ -503,8 +512,8 @@ watch(
               class="whitespace-nowrap border-b-2 px-1 py-4 text-sm font-medium"
               :class="
                 activeTab === 'targets'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
               "
               @click="activeTab = 'targets'"
             >
@@ -523,7 +532,7 @@ watch(
               <label class="block text-sm font-medium">环境名称</label>
               <input
                 v-model="editingEnv.name"
-                class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                class="mt-1 block w-full rounded-md border border-input px-3 py-2"
                 placeholder="例如: 开发环境"
               />
             </div>
@@ -531,7 +540,7 @@ watch(
               <label class="block text-sm font-medium">环境标识</label>
               <input
                 v-model="editingEnv.identifier"
-                class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                class="mt-1 block w-full rounded-md border border-input px-3 py-2"
                 placeholder="例如: dev, test, prod"
               />
             </div>
@@ -540,7 +549,7 @@ watch(
             <label class="block text-sm font-medium">描述</label>
             <textarea
               v-model="editingEnv.description"
-              class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+              class="mt-1 block w-full rounded-md border border-input px-3 py-2"
               rows="2"
               placeholder="环境描述信息"
             ></textarea>
@@ -549,7 +558,7 @@ watch(
             <label class="block text-sm font-medium">项目根目录</label>
             <input
               v-model="editingEnv.projectRoot"
-              class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+              class="mt-1 block w-full rounded-md border border-input px-3 py-2"
               placeholder="D:\\javaproject\\backcode"
             />
           </div>
@@ -557,7 +566,7 @@ watch(
             <label class="block text-sm font-medium">构建类型</label>
             <select
               v-model="editingEnv.buildType"
-              class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+              class="mt-1 block w-full rounded-md border border-input px-3 py-2"
             >
               <option value="backend">后端（Maven）</option>
               <option value="frontend">前端（npm build）</option>
@@ -566,11 +575,11 @@ watch(
           <div class="grid grid-cols-2 gap-4">
             <!-- 云端部署 Toggle -->
             <div
-              class="flex items-center justify-between rounded-md border border-gray-200 p-3"
+              class="flex items-center justify-between rounded-md border border-border p-3"
             >
               <div>
                 <div class="text-sm font-medium">云端部署</div>
-                <div class="text-xs text-gray-500">
+                <div class="text-xs text-muted-foreground">
                   启用后将支持打包后上传服务器和远程重启
                 </div>
               </div>
@@ -581,20 +590,20 @@ watch(
                   v-model="editingEnv.cloudDeploy"
                 />
                 <div
-                  class="h-6 w-11 rounded-full bg-gray-200 peer-checked:bg-blue-500 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-5"
+                  class="h-6 w-11 rounded-full bg-input peer-checked:bg-primary after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-5"
                 ></div>
               </label>
             </div>
 
             <!-- 超时时间 Input -->
             <div
-              class="flex flex-col justify-center rounded-md border border-gray-200 p-3"
+              class="flex flex-col justify-center rounded-md border border-border p-3"
             >
               <label class="block text-sm font-medium">超时时间 (秒)</label>
               <input
                 v-model.number="editingEnv.timeout"
                 type="number"
-                class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm"
+                class="mt-1 block w-full rounded-md border border-input px-3 py-1.5 text-sm"
                 placeholder="600"
               />
             </div>
@@ -607,7 +616,7 @@ watch(
           <div class="flex items-center justify-between rounded-md border p-4">
             <div>
               <h3 class="text-lg font-medium">服务器配置</h3>
-              <p class="text-sm text-gray-500">SSH 远程服务器配置</p>
+              <p class="text-sm text-muted-foreground">SSH 远程服务器配置</p>
             </div>
             <button
               class="rounded-md bg-primary px-3 py-1.5 text-sm text-white hover:bg-primary/90"
@@ -619,7 +628,7 @@ watch(
 
           <div
             v-if="(editingEnv?.servers?.length ?? 0) === 0"
-            class="py-8 text-center text-gray-500"
+            class="py-8 text-center text-muted-foreground"
           >
             暂无服务器配置，请添加
           </div>
@@ -643,7 +652,7 @@ watch(
                   <label class="block text-sm font-medium">服务器名称</label>
                   <input
                     v-model="server.name"
-                    class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                    class="mt-1 block w-full rounded-md border border-input px-3 py-2"
                     placeholder="开发服务器"
                   />
                 </div>
@@ -651,7 +660,7 @@ watch(
                   <label class="block text-sm font-medium">主机地址</label>
                   <input
                     v-model="server.host"
-                    class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                    class="mt-1 block w-full rounded-md border border-input px-3 py-2"
                     placeholder="192.168.1.100"
                   />
                 </div>
@@ -660,7 +669,7 @@ watch(
                   <input
                     v-model.number="server.port"
                     type="number"
-                    class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                    class="mt-1 block w-full rounded-md border border-input px-3 py-2"
                     placeholder="22"
                   />
                 </div>
@@ -668,7 +677,7 @@ watch(
                   <label class="block text-sm font-medium">用户名</label>
                   <input
                     v-model="server.username"
-                    class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                    class="mt-1 block w-full rounded-md border border-input px-3 py-2"
                     placeholder="root"
                   />
                 </div>
@@ -677,7 +686,7 @@ watch(
                   <input
                     v-model="server.password"
                     type="password"
-                    class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                    class="mt-1 block w-full rounded-md border border-input px-3 py-2"
                     placeholder="请输入密码"
                   />
                 </div>
@@ -685,17 +694,17 @@ watch(
                   <label class="block text-sm font-medium">部署目录</label>
                   <input
                     v-model="server.deployDir"
-                    class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                    class="mt-1 block w-full rounded-md border border-input px-3 py-2"
                     placeholder="/home/omp/jar/"
                   />
                 </div>
                 <template v-if="editingEnv?.buildType !== 'frontend'">
                   <div
-                    class="flex items-center justify-between rounded-md border border-gray-200 p-3"
+                    class="flex items-center justify-between rounded-md border border-border p-3"
                   >
                     <div>
                       <div class="text-sm font-medium">启用重启</div>
-                      <div class="text-xs text-gray-500">
+                      <div class="text-xs text-muted-foreground">
                         部署后自动执行重启脚本
                       </div>
                     </div>
@@ -708,16 +717,16 @@ watch(
                         v-model="server.enableRestart"
                       />
                       <div
-                        class="h-6 w-11 rounded-full bg-gray-200 peer-checked:bg-blue-500 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-5"
+                        class="h-6 w-11 rounded-full bg-input peer-checked:bg-primary after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-5"
                       ></div>
                     </label>
                   </div>
                   <div
-                    class="flex items-center justify-between rounded-md border border-gray-200 p-3"
+                    class="flex items-center justify-between rounded-md border border-border p-3"
                   >
                     <div>
                       <div class="text-sm font-medium">使用 Sudo</div>
-                      <div class="text-xs text-gray-500">
+                      <div class="text-xs text-muted-foreground">
                         使用 sudo 权限执行命令
                       </div>
                     </div>
@@ -730,7 +739,7 @@ watch(
                         v-model="server.useSudo"
                       />
                       <div
-                        class="h-6 w-11 rounded-full bg-gray-200 peer-checked:bg-blue-500 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-5"
+                        class="h-6 w-11 rounded-full bg-input peer-checked:bg-primary after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-5"
                       ></div>
                     </label>
                   </div>
@@ -738,7 +747,7 @@ watch(
                     <label class="block text-sm font-medium">重启脚本</label>
                     <input
                       v-model="server.restartScript"
-                      class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                      class="mt-1 block w-full rounded-md border border-input px-3 py-2"
                       :class="{ 'border-red-300 focus:border-red-400': isInvalidRestartScript(server.restartScript) }"
                       placeholder="/home/omp/jar/restart.sh"
                     />
@@ -757,6 +766,7 @@ watch(
                     <pre class="text-sm text-amber-900 whitespace-pre-wrap break-all font-mono">{{
                       buildRestartCommand(server.restartScript, server.useSudo) || "请先填写重启脚本"
                     }}</pre>
+                    <p class="mt-2 text-xs text-amber-700">请确认 sudo 权限与脚本路径正确</p>
                   </div>
                 </template>
             </div>
@@ -767,26 +777,15 @@ watch(
           >
             <div class="mb-3">
               <h4 class="font-medium">前端文件信息</h4>
-              <p class="text-sm text-gray-500">部署目录直接使用每台服务器的“部署目录”字段，不再单独配置 URL 路径</p>
+              <p class="text-sm text-muted-foreground">部署目录直接使用每台服务器的“部署目录”字段，不再单独配置 URL 路径</p>
             </div>
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm font-medium">本地路径</label>
+            <div class="space-y-3">
+              <div class="grid grid-cols-10 items-center gap-3">
+                <label class="col-span-3 text-sm font-medium">本地路径</label>
                 <input
                   value="dist.zip"
                   disabled
-                  class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
-                />
-              </div>
-              <div>
-                <label class="block text-sm font-medium">
-                  远程文件名
-                  <span class="block text-xs text-gray-500">(可选)</span>
-                </label>
-                <input
-                  :value="getFrontendRemoteName()"
-                  disabled
-                  class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                  class="col-span-7 block w-full rounded-md border border-input px-3 py-2"
                 />
               </div>
               <div class="col-span-2 rounded-md border border-blue-200 bg-blue-50 p-3">
@@ -803,7 +802,7 @@ watch(
                     :key="`frontend-cmd-${server.id}-${idx}`"
                     class="rounded border border-blue-200 bg-white p-3"
                   >
-                    <div class="text-xs text-gray-600 mb-1">{{ server.name || `服务器 ${idx + 1}` }} (目录: {{ normalizeRemotePath(server.deployDir) }})</div>
+                    <div class="text-xs text-muted-foreground mb-1">{{ server.name || `服务器 ${idx + 1}` }} (目录: {{ normalizeRemotePath(server.deployDir) }})</div>
                     <div class="text-xs text-blue-700">备份旧 dist</div>
                     <pre class="text-sm text-blue-900 whitespace-pre-wrap break-all font-mono">{{ buildFrontendBackupCommand(normalizeRemotePath(server.deployDir), server.useSudo) }}</pre>
                     <div class="text-xs text-blue-700 mt-2">解压并覆盖 dist</div>
@@ -823,7 +822,7 @@ watch(
           <div class="flex items-center justify-between rounded-md border p-4">
             <div>
               <h3 class="text-lg font-medium">目标文件配置</h3>
-              <p class="text-sm text-gray-500">
+              <p class="text-sm text-muted-foreground">
                 {{
                   editingEnv?.buildType === "frontend"
                     ? "前端部署仅上传 dist.zip"
@@ -856,18 +855,18 @@ watch(
                 <input
                   value="dist.zip"
                   disabled
-                  class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                  class="mt-1 block w-full rounded-md border border-input px-3 py-2"
                 />
               </div>
               <div>
                   <label class="block text-sm font-medium">
                     远程文件名
-                    <span class="block text-xs text-gray-500">(可选)</span>
+                    <span class="block text-xs text-muted-foreground">(可选)</span>
                   </label>
                 <input
                   value="dist.zip"
                   disabled
-                  class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                  class="mt-1 block w-full rounded-md border border-input px-3 py-2"
                 />
               </div>
             </div>
@@ -876,7 +875,7 @@ watch(
           <template v-else>
             <div
               v-if="(editingEnv?.targetFiles?.length ?? 0) === 0"
-              class="py-8 text-center text-gray-500"
+              class="py-8 text-center text-muted-foreground"
             >
               暂无目标文件，请添加
             </div>
@@ -895,7 +894,7 @@ watch(
                         v-model="file.defaultCheck"
                       />
                       <div
-                        class="h-6 w-11 rounded-full bg-gray-200 peer-checked:bg-blue-500 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-5"
+                        class="h-6 w-11 rounded-full bg-input peer-checked:bg-primary after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-5"
                       ></div>
                     </label>
                     <h4 class="font-medium">文件 {{ index + 1 }}</h4>
@@ -907,23 +906,22 @@ watch(
                     删除
                   </button>
                 </div>
-                <div class="grid grid-cols-2 gap-4">
-                  <div>
-                    <label class="block text-sm font-medium">本地路径</label>
+                <div class="space-y-3">
+                  <div class="grid grid-cols-10 items-center gap-3">
+                    <label class="col-span-3 text-sm font-medium">本地路径</label>
                     <input
                       v-model="file.localPath"
-                      class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                      class="col-span-7 block w-full rounded-md border border-input px-3 py-2"
                       placeholder="startup\xxx\target\xxx.jar"
                     />
                   </div>
-                  <div>
-                    <label class="block text-sm font-medium">
-                      远程文件名
-                      <span class="block text-xs text-gray-500">(可选)</span>
+                  <div class="grid grid-cols-10 items-center gap-3">
+                    <label class="col-span-3 text-sm font-medium">
+                      远程文件名（可选）
                     </label>
                     <input
                       v-model="file.remoteName"
-                      class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                      class="col-span-7 block w-full rounded-md border border-input px-3 py-2"
                       placeholder="留空则使用原文件名"
                     />
                   </div>
@@ -939,7 +937,7 @@ watch(
       v-if="showDeleteModal"
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
     >
-      <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+      <div class="w-full max-w-md rounded-lg bg-card p-6 shadow-xl">
         <div class="mb-4 flex items-center gap-3">
           <div
             class="flex h-10 w-10 items-center justify-center rounded-full bg-red-100"
@@ -958,11 +956,11 @@ watch(
               />
             </svg>
           </div>
-          <h3 class="text-lg font-semibold text-gray-900">确认删除</h3>
+          <h3 class="text-lg font-semibold text-foreground">确认删除</h3>
         </div>
-        <p class="mb-6 text-gray-600">
+        <p class="mb-6 text-muted-foreground">
           确定要删除环境
-          <span class="font-medium text-gray-900"
+          <span class="font-medium text-foreground"
             >"{{ deleteTargetName }}"</span
           >
           吗？<br />
@@ -971,7 +969,7 @@ watch(
         <div class="flex justify-end gap-3">
           <button
             @click="cancelDelete"
-            class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            class="rounded-md border border-input bg-white px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/50"
           >
             取消
           </button>
