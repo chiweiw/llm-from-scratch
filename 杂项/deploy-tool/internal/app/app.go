@@ -240,6 +240,17 @@ func (a *App) SaveSystemDefaults(req request.SaveSystemDefaults) response.Base {
 	return response.OK()
 }
 
+func (a *App) GetLastSelectedEnvID() response.Data[string] {
+	return response.OKData(a.configService.GetLastSelectedEnvID())
+}
+
+func (a *App) SetLastSelectedEnvID(req request.SetLastSelectedEnvID) response.Base {
+	if err := a.configService.SetLastSelectedEnvID(req.ID); err != nil {
+		return response.Fail(err.Error())
+	}
+	return response.OK()
+}
+
 func (a *App) ParseMavenCommand(req request.ParseMavenCommand) response.Data[*service.MavenParseResult] {
 	return response.OKData(service.ParseMavenCommand(req.Command))
 }

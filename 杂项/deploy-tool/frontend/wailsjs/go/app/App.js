@@ -46,6 +46,10 @@ export function GetGlobalSettings() {
   return window['go']['app']['App']['GetGlobalSettings']();
 }
 
+export function GetLastSelectedEnvID() {
+  return window['go']['app']['App']['GetLastSelectedEnvID']();
+}
+
 export function GetSystemDefaults() {
   return window['go']['app']['App']['GetSystemDefaults']();
 }
@@ -72,6 +76,10 @@ export function SaveSystemDefaults(arg1) {
 
 export function SetDeployService(arg1) {
   return window['go']['app']['App']['SetDeployService'](arg1);
+}
+
+export function SetLastSelectedEnvID(arg1) {
+  return window['go']['app']['App']['SetLastSelectedEnvID'](arg1);
 }
 
 export function StartDeploy(arg1) {

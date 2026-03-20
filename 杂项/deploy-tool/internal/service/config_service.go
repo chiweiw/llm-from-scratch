@@ -560,6 +560,18 @@ func defaultSystemDefaults() entity.SystemDefaultConfig {
 	}
 }
 
+func (s *ConfigService) GetLastSelectedEnvID() string {
+	m, err := s.globalSettingDAO.GetMap()
+	if err != nil {
+		return ""
+	}
+	return m["last_selected_env_id"]
+}
+
+func (s *ConfigService) SetLastSelectedEnvID(id string) error {
+	return s.globalSettingDAO.Set("last_selected_env_id", id)
+}
+
 func isBindingsProcess() bool {
 	base := strings.ToLower(filepath.Base(os.Args[0]))
 	return strings.Contains(base, "wailsbindings")

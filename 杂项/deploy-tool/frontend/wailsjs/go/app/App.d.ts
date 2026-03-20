@@ -26,6 +26,8 @@ export function GetEnvironments():Promise<response.Data___deploy_tool_internal_m
 
 export function GetGlobalSettings():Promise<response.Data_deploy_tool_internal_model_entity_GlobalSettings_>;
 
+export function GetLastSelectedEnvID():Promise<response.Data_string_>;
+
 export function GetSystemDefaults():Promise<response.Data_deploy_tool_internal_model_entity_SystemDefaultConfig_>;
 
 export function ImportConfig(arg1:request.ImportEnvironment):Promise<response.Base>;
@@ -39,6 +41,8 @@ export function SaveGlobalSettings(arg1:request.SaveGlobalSettings):Promise<resp
 export function SaveSystemDefaults(arg1:request.SaveSystemDefaults):Promise<response.Base>;
 
 export function SetDeployService(arg1:service.DeployService):Promise<void>;
+
+export function SetLastSelectedEnvID(arg1:request.SetLastSelectedEnvID):Promise<response.Base>;
 
 export function StartDeploy(arg1:request.StartDeploy):Promise<response.Base>;
 

@@ -10,3 +10,7 @@ type SaveSystemDefaults struct {
 	Defaults entity.SystemDefaultConfig `json:"defaults"`
 }
 
+type SetLastSelectedEnvID struct {
+	ID string `json:"id"`
+}
+

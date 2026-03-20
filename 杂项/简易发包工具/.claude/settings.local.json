@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//d/pyproject/llm-from-scratch/杂项/deploy-tool/**)",
+      "Bash(go build:*)",
+      "Bash(cmd /c \"cd /d D:\\\\pyproject\\\\llm-from-scratch\\\\杂项\\\\deploy-tool && go build ./... 2>&1\")",
+      "Bash(powershell -Command \"Set-Location 'D:\\\\pyproject\\\\llm-from-scratch\\\\杂项\\\\deploy-tool'; go build ./... 2>&1\")",
+      "Bash(python -m json.tool)",
+      "Bash(cd \"D:\\\\pyproject\\\\llm-from-scratch\\\\杂项\\\\deploy-tool\" && go build ./... 2>&1\necho \"exit: $?\")"
+    ]
+  },
+  "enabledPlugins": {
+    "frontend-design@claude-plugins-official": true
+  }
+}

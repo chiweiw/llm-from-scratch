@@ -62,23 +62,6 @@ func (s *MavenBuildService) StartBuild(ctx context.Context, cfg *MavenBuildConfi
 
 	s.ctx, s.cancel = context.WithCancel(ctx)
 	s.progress = progress
-	unlock := s.lockProgress()
-	if s.progress != nil {
-		s.progress.Status = entity.DeployStatusRunning
-		s.progress.StartTime = time.Now().Unix()
-	}
-	unlock()
-
-	defer func() {
-		unlock := s.lockProgress()
-		if s.progress != nil {
-			s.progress.EndTime = time.Now().Unix()
-			if s.progress.Status == entity.DeployStatusRunning {
-				s.progress.Status = entity.DeployStatusSuccess
-			}
-		}
-		unlock()
-	}()
 
 	result := &MavenBuildResult{
 		BuiltFiles: []string{},
@@ -212,11 +195,6 @@ func (s *MavenBuildService) StartBuild(ctx context.Context, cfg *MavenBuildConfi
 	result.Duration = time.Since(time.Unix(s.progress.StartTime, 0))
 
 	s.updateStepStatus("Maven 打包", entity.StepStatusSuccess, fmt.Sprintf("构建完成，生成 %d 个文件", len(builtFiles)))
-	unlock = s.lockProgress()
-	if s.progress != nil {
-		s.progress.TotalProgress = 100
-	}
-	unlock()
 
 	result.Success = true
 	return result, nil

@@ -483,6 +483,18 @@ export namespace request {
 		    return a;
 		}
 	}
+	export class SetLastSelectedEnvID {
+	    id: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SetLastSelectedEnvID(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	    }
+	}
 	export class StartDeploy {
 	    environmentId: string;
 	    jarIds: string[];

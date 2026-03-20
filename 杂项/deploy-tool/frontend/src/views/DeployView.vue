@@ -11,6 +11,7 @@ const envStore = useEnvironmentStore();
 const deployStore = useDeployStore();
 const settingsStore = useSettingsStore();
 
+const selectedType = ref<"backend" | "frontend" | "">("");
 const selectedEnvId = ref("");
 const errorMessage = ref("");
 const showSuccess = ref(false);
@@ -22,6 +23,33 @@ const precheckResult = ref<CheckResult | null>(null);
 const selectedEnv = computed(() =>
   envStore.environments.find((env) => env.id === selectedEnvId.value)
 );
+
+const filteredEnvs = computed(() => {
+  if (!selectedType.value) return [];
+  return envStore.environments.filter((env) => {
+    const bt = env.buildType || "backend";
+    return bt === selectedType.value;
+  });
+});
+
+function selectType(type: "backend" | "frontend") {
+  if (deployStore.isDeploying) return;
+  selectedType.value = type;
+  // 若当前已选环境类型不匹配，则清空
+  const cur = envStore.environments.find((e) => e.id === selectedEnvId.value);
+  if (cur && (cur.buildType || "backend") !== type) {
+    selectedEnvId.value = "";
+  }
+}
+
+function selectEnv(id: string) {
+  if (deployStore.isDeploying) return;
+  selectedEnvId.value = id;
+  // 持久化到后端
+  import("../../wailsjs/go/app/App").then(({ SetLastSelectedEnvID }) => {
+    SetLastSelectedEnvID({ id }).catch(() => {});
+  });
+}
 
 const isLightLog = computed(() => settingsStore.globalSettings.lightLog !== false);
 
@@ -73,6 +101,18 @@ onMounted(async () => {
   await settingsStore.fetchGlobalSettings();
   // Recover any in-progress deployment state after a page navigation or reload.
   await deployStore.fetchProgress();
+
+  // 恢复上次选取
+  const { GetLastSelectedEnvID } = await import("../../wailsjs/go/app/App");
+  const savedResp = await GetLastSelectedEnvID().catch(() => null);
+  const savedId = savedResp?.code === 0 ? savedResp.data : null;
+  if (savedId) {
+    const env = envStore.environments.find((e) => e.id === savedId);
+    if (env) {
+      selectedType.value = (env.buildType === "frontend" ? "frontend" : "backend");
+      selectedEnvId.value = savedId;
+    }
+  }
 });
 
 function handleLog(data: {
@@ -254,21 +294,56 @@ async function cancelDeploy() {
 
     <!-- Env selector row -->
     <div class="mb-4 shrink-0">
-      <div class="flex items-center gap-3 flex-wrap">
-        <select
-          v-model="selectedEnvId"
-          class="rounded-md border border-input bg-background px-3 py-2 text-sm max-w-xs focus:outline-none focus:ring-1 focus:ring-ring"
+      <!-- 第一级：类型选择（后端 / 前端） -->
+      <div class="flex items-center gap-2 mb-2">
+        <span class="text-xs text-muted-foreground font-medium w-8 shrink-0">类型</span>
+        <button
+          v-for="type in (['backend', 'frontend'] as const)"
+          :key="type"
+          @click="selectType(type)"
+          :disabled="deployStore.isDeploying"
+          :title="deployStore.isDeploying ? '部署进行中，不允许切换环境' : ''"
+          class="px-3 py-1 rounded-md text-xs font-medium border transition-colors"
+          :class="[
+            selectedType === type
+              ? type === 'backend'
+                ? 'bg-blue-100 text-blue-700 border-blue-300'
+                : 'bg-purple-100 text-purple-700 border-purple-300'
+              : 'border-input text-muted-foreground hover:bg-muted/50',
+            deployStore.isDeploying ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
+          ]"
         >
-          <option value="">请选择环境</option>
-          <option
-            v-for="env in envStore.environments"
-            :key="env.id"
-            :value="env.id"
-          >
-            {{ env.buildType === "frontend" ? "前端" : "后端" }} |
-            {{ env.name }}
-          </option>
-        </select>
+          {{ type === 'backend' ? '后端' : '前端' }}
+        </button>
+      </div>
+
+      <!-- 第二级：环境选择（过滤后的列表） -->
+      <div v-if="selectedType" class="flex items-center gap-2 mb-3 flex-wrap">
+        <span class="text-xs text-muted-foreground font-medium w-8 shrink-0">环境</span>
+        <button
+          v-for="env in filteredEnvs"
+          :key="env.id"
+          @click="selectEnv(env.id)"
+          :disabled="deployStore.isDeploying"
+          :title="deployStore.isDeploying ? '部署进行中，不允许切换环境' : env.description || ''"
+          class="px-3 py-1 rounded-md text-xs font-medium border transition-colors"
+          :class="[
+            selectedEnvId === env.id
+              ? 'bg-primary text-primary-foreground border-primary'
+              : 'border-input text-muted-foreground hover:bg-muted/50',
+            deployStore.isDeploying ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
+          ]"
+        >
+          {{ env.name }}
+        </button>
+        <span v-if="filteredEnvs.length === 0" class="text-xs text-muted-foreground/60 italic">
+          暂无环境
+        </span>
+      </div>
+      <div v-else class="mb-3 h-7" /><!-- 占位，保持布局稳定 -->
+
+      <!-- 操作按钮行 -->
+      <div class="flex items-center gap-3 flex-wrap">
         <span
           v-if="selectedEnv"
           class="rounded-full px-2.5 py-0.5 text-xs font-medium"
